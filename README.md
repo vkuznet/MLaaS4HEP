@@ -1,4 +1,12 @@
 ### Machine Learning as a Service for HEP
+
+DOI: 10.5281/zenodo.1481781
+
+[![Build Status](https://travis-ci.org/vkuznet/TFaaS.svg?branch=master)](https://travis-ci.org/vkuznet/TFaaS)
+[![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/vkuznet/LICENSE)
+[![DOI](https://zenodo.org/badge/156857396.svg)](https://zenodo.org/badge/latestdoi/156857396)
+[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=TensorFlow%20as%20a%20service%20&url=https://github.com/vkuznet/MLaaS4HEP&hashtags=python,ml)
+
 MLaaS for HEP is a set of Python based modules to read HEP ROOT files and
 stream them to ML of user choice for training. It consists of three independent layers:
 - data streaming layer to handle remote data,
