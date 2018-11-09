@@ -1,12 +1,18 @@
 ### Machine Learning as a Service for HEP
-MLaaS for HEP consists of three independent layers:
-- data streaming layer to handle remote data, see `reader.py` module
-- data training layer to train ML model for given HEP data, see `workflow.py`
-  module
-- data inference layer, see tfaas_client.py module
+MLaaS for HEP is a set of Python based modules to read HEP ROOT files and
+stream them to ML of user choice for training. It consists of three independent layers:
+- data streaming layer to handle remote data,
+  see [reader.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/reader.py)
+- data training layer to train ML model for given HEP data,
+  see [workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/workflow.py)
+- data inference layer,
+  see [tfaas_client.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/tfaas_client.py)
 
-The general architecture looks like this:
+The general architecture of MLaaS4HEP looks like this:
 ![MLaaS4HEP-architecture](https://github.com/vkuznet/MLaaS4HEP/blob/master/images/MLaaS4HEP-architecture.png)
+
+The pre-trained models can be easily uploaded to
+[TFaas](https://github.com/vkuznet/TFaaS) server for serving them to clients.
 
 ### Reading ROOT files
 MLaaS4HEP python repository provides two base modules to read and manipulate with
