@@ -2,9 +2,9 @@
 #-*- coding: utf-8 -*-
 #pylint: disable=
 """
-File       : tfaas.py
+File       : workflow.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
-Description: TFaaS APIs for remote access of HEP data via uproot
+Description: MLaaS4HEP workflow, it provides example how to read ROOT files and train over them ML model
 """
 
 # system modules
