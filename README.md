@@ -1,7 +1,5 @@
 ### Machine Learning as a Service for HEP
 
-DOI: 10.5281/zenodo.1481781
-
 [![Build Status](https://travis-ci.org/vkuznet/TFaaS.svg?branch=master)](https://travis-ci.org/vkuznet/TFaaS)
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/vkuznet/LICENSE)
 [![DOI](https://zenodo.org/badge/156857396.svg)](https://zenodo.org/badge/latestdoi/156857396)
