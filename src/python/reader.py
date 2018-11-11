@@ -302,9 +302,11 @@ class DataReader(object):
 
     def fetch_data(self, key):
         "fetch data for given key from underlying ROOT tree"
+        if sys.version.startswith('3.') and isinstance(key, str):
+            key = key.encode('ascii') # convert string to binary
         if key in self.branches:
             return self.branches[key]
-        raise Exception('Unable to find %s key in ROOT branches' % key)
+        raise Exception('Unable to find "%s" key in ROOT branches' % key)
 
     def read_chunk(self, nevts, set_branches=False, set_min_max=False):
         "Reach chunk of events and determine min/max values as well as load branch values"
@@ -362,6 +364,13 @@ class DataReader(object):
                     % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
             if self.verbose:
                 print(msg)
+            if self.verbose > 1:
+                print("\n### Flat attributes:")
+                for key in self.flat_keys():
+                    print(key)
+                print("\n### Jagged array attributes:")
+                for key in self.jagged_keys():
+                    print(key)
             self.idx = -1
             return
 
@@ -416,6 +425,13 @@ class DataReader(object):
                 % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
         if self.verbose:
             print(msg)
+            if self.verbose > 1:
+                print("\n### Flat attributes:")
+                for key in self.flat_keys():
+                    print(key)
+                print("\n### Jagged array attributes:")
+                for key in self.jagged_keys():
+                    print(key)
         if psutil and self.verbose:
             vmem1 = psutil.virtual_memory()
             swap1 = psutil.swap_memory()
