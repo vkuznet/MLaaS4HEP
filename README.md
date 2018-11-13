@@ -151,3 +151,7 @@ tfaas_client.py --url=$url --predict=input.json
 # here we refer to uploaded on TFaaS ImageModel model
 tfaas_client.py --url=$url --image=/path/file.png --model=ImageModel
 ```
+
+### Citation
+Please use this publication for further citation:
+[http://arxiv.org/abs/1811.04492](http://arxiv.org/abs/1811.04492)
