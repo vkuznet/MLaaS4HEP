@@ -24,7 +24,10 @@ class Trainer(object):
         self.verbose = verbose
         self.cls_model = '{}'.format(type(self.model)).lower()
         if self.verbose:
-            print(self.model.summary())
+            try:
+                print(self.model.summary())
+            except AttributeError:
+                print(self.model)
 
     def fit(self, data, y_train, **kwds):
         "Fit implementation of the trainer"
