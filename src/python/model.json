@@ -1,5 +1,6 @@
 {
     "nevts": 3000,
+    "shuffle": true,
     "chunk_size": 1000,
     "epochs": 50,
     "batch_size": 256,
