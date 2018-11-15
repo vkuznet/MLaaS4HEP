@@ -76,10 +76,10 @@ simple as
 ./workflow.py --files=files.txt
 
 # run pytorch example
-./workflow.py --files=files.txt --test=pytorch
+./workflow.py --files=files.txt --model=ex_pytorch.py
 
 # run keras example
-./workflow.py --files=files.txt --test=keras
+./workflow.py --files=files.txt --model=ex_keras.py
 
 # cat files.txt
 #dasgoclient -query="file dataset=/Tau/Run2018C-14Sep2018_ver3-v1/NANOAOD"
