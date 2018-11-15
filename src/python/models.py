@@ -84,14 +84,23 @@ def train_model(model, files, params=None, specs=None, fout=None):
     batch_size = specs.get('batch_size', 50)
     shuffle = specs.get('shuffle', True)
     split = specs.get('split', 0.3)
-    for (x_train, x_mask) in gen:
+    trainer = False
+    for data in gen:
+        x_train = data[0]
+        x_mask = data[1]
         print("x_train chunk of {} shape".format(np.shape(x_train)))
         print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         if np.shape(x_train)[0] == 0:
             print("received empty x_train chunk")
             break
-        data = np.array([x_train, x_mask])
-        kwds = {}
+        if not trainer:
+            input_shape = (np.shape(x_train)[-1],) # read number of attributes we have
+            trainer = Trainer(model(input_shape), verbose=params.get('verbose', 0))
+        # create dummy vector for y's for our x_train
+        y_train = np.random.randint(2, size=np.shape(x_train)[0])
+        y_train = to_categorical(y_train) # convert labesl to categorical values
+        print("y_train {} chunk of {} shape".format(y_train, np.shape(y_train)))
+        kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
         trainer.fit(data, y_train, **kwds)
     if fout:
         trainer.save(fout)
