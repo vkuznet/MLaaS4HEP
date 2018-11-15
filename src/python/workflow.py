@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import time
+import random
 import argparse
 import traceback
 
@@ -28,8 +29,6 @@ class OptionParser():
     def __init__(self):
         "User based option parser"
         self.parser = argparse.ArgumentParser(prog='PROG')
-        self.parser.add_argument("--fin", action="store",
-            dest="fin", default="", help="Input ROOT file")
         self.parser.add_argument("--params", action="store",
             dest="params", default="model.json",
             help="Input model parameters (default model.json)")
@@ -56,7 +55,6 @@ class DataGenerator(object):
             params = {}
         # parse given parameters
         nan = params.get('nan', np.nan)
-        nevts = params.get('nevts', -1)
         batch_size = params.get('batch_size', 256)
         verbose = params.get('verbose', 0)
         branch = params.get('branch', 'Events')
@@ -64,10 +62,22 @@ class DataGenerator(object):
         chunk_size = params.get('chunk_size', 1000)
         exclude_branches = params.get('exclude_branches', [])
         redirector = params.get('redirector', 'root://cms-xrd-global.cern.ch')
+        self.evts = params.get('nevts', -1)
+        self.shuffle = params.get('shuffle', False)
+
+        # convert input fin parameter into file list if necessary
+        if isinstance(fin, str):
+            self.files = [fin]
+        elif isinstance(fin, list):
+            self.files = fin
+        else:
+            raise Exception("Unsupported data-type '%s' for fin parameter" % type(fin))
+
+        self.reader = {} # global reader will handle all files readers
+        self.reader_counter = {} # reader counter keeps track of nevts read by readers
 
         if verbose:
-            print('\n')
-            print(timestamp('{}'.format(self)))
+            print(timestamp('DataGenerator: {}'.format(self)))
             print("model parameters: {}".format(json.dumps(params)))
 
         if exclude_branches and not isinstance(exclude_branches, list):
@@ -79,50 +89,60 @@ class DataGenerator(object):
             if verbose:
                 print("exclude branches", exclude_branches)
 
-        # if no specs is given try to read them from local area
-        if not specs:
-            fbase = fin.split('/')[-1].replace('.root', '')
-            sname = 'specs-{}.json'.format(fbase)
-            if os.path.isfile(sname):
-                if verbose:
-                    print("loading specs {}".format(sname))
-                specs = json.load(open(sname))
-
-        self.reader = DataReader(fin, branch=branch, selected_branches=branches,
-            exclude_branches=exclude_branches, nan=nan,
-            chunk_size=chunk_size, nevts=0, specs=specs,
-            redirector=redirector, verbose=verbose)
         self.start_idx = 0
-        self.nevts = nevts if nevts != -1 else self.reader.nrows
         self.chunk_size = chunk_size
         self.stop_idx = chunk_size
         self.batch_size = batch_size
         self.verbose = verbose
 
-        # since no specs were found or given we'll produce them and add them to the reader
-        if not specs:
-            fbase = fin.split('/')[-1].replace('.root', '')
+        # loop over files and create individual readers for them, then put them in a global reader
+        for fname in self.files:
+            # if no specs is given try to read them from local area
+            fbase = fname.split('/')[-1].replace('.root', '')
             sname = 'specs-{}.json'.format(fbase)
+            if not specs:
+                if os.path.isfile(sname):
+                    if verbose:
+                        print("loading specs {}".format(sname))
+                    specs = json.load(open(sname))
+
+            reader = DataReader(fname, branch=branch, selected_branches=branches,
+                exclude_branches=exclude_branches, nan=nan,
+                chunk_size=chunk_size, nevts=0, specs=specs,
+                redirector=redirector, verbose=verbose)
+
             if not os.path.isfile(sname):
                 if verbose:
                     print("writing specs {}".format(sname))
-                self.reader.write_specs(sname)
-            self.reader.load_specs(sname)
+                reader.write_specs(sname)
 
-        print("init DataReader in {} sec".format(time.time()-time0))
+            if not specs:
+                reader.load_specs(sname)
 
+            self.reader[fname] = reader
+            self.reader_counter[fname] = 0
+
+        self.current_file = self.files[0]
+
+        print("init DataGenerator in {} sec".format(time.time()-time0))
+
+    @property
+    def nevts(self):
+        "Return number of events of current file"
+        return self.evts if self.evts != -1 else self.reader[self.current_file].nrows
+         
     def __len__(self):
         "Return total number of batches this generator can deliver"
         return int(np.floor(self.nevts / self.batch_size))
 
     def next(self):
         "Return next batch of events"
-        msg = "\nTFaaS read from {} to {}".format(self.start_idx, self.stop_idx)
+        msg = "\nread chunk [{}:{}] from {}".format(self.start_idx, self.stop_idx, self.current_file)
         gen = self.read_data(self.start_idx, self.stop_idx)
         # advance start and stop indecies
         self.start_idx = self.stop_idx
         self.stop_idx = self.start_idx+self.chunk_size
-        if self.start_idx > self.nevts or self.start_idx > self.reader.nrows:
+        if self.start_idx > self.nevts or self.start_idx > self.reader[self.current_file].nrows:
             # we reached the limit of the reader
             self.start_idx = 0
             self.stop_idx = self.chunk_size
@@ -146,14 +166,40 @@ class DataGenerator(object):
 
     def read_data(self, start=0, stop=100, verbose=0):
         "Helper function to read ROOT data via uproot reader"
+        # if we exceed number of events in a file we discard it
+        if self.nevts < self.reader_counter[self.current_file]:
+            if self.verbose:
+                msg = "# discard {} since we read {} out of {} events"\
+                        .format(self.current_file, \
+                        self.reader_counter[self.current_file], self.nevts)
+                print(msg)
+            self.files.remove(self.current_file)
+            if len(self.files):
+                self.current_file = self.files[0]
+            else:
+                print("# no more files to read from")
+                raise StopIteration
+        if self.shuffle:
+            idx = random.randint(0, len(self.files)-1)
+            self.current_file = self.files[idx]
+        current_file = self.current_file
+        reader = self.reader[current_file]
         if stop == -1:
-            for _ in range(self.reader.nrows):
-                xdf, mask = self.reader.next(verbose=verbose)
+            for _ in range(reader.nrows):
+                xdf, mask = reader.next(verbose=verbose)
                 yield (xdf, mask)
+            read_evts = reader.nrows
         else:
             for _ in range(start, stop):
-                xdf, mask = self.reader.next(verbose=verbose)
+                xdf, mask = reader.next(verbose=verbose)
                 yield (xdf, mask)
+                read_evts = stop-start
+        # update how many events we read from current file
+        self.reader_counter[self.current_file] += read_evts
+        if self.verbose:
+            nevts = self.reader_counter[self.current_file]
+            msg = "\ntotal read {} evts from {}".format(nevts, current_file)
+            print(msg)
 
 class Trainer(object):
     def __init__(self, model, verbose=0):
@@ -202,29 +248,28 @@ def testKeras(files, params=None, specs=None):
         params = {}
     if not specs:
         specs = {}
-    for fin in files:
-        fin = xfile(fin)
-        gen = DataGenerator(fin, params, specs)
-        epochs = specs.get('epochs', 10)
-        batch_size = specs.get('batch_size', 50)
-        shuffle = specs.get('shuffle', True)
-        split = specs.get('split', 0.3)
-        trainer = False
-        for data in gen:
-            x_train = np.array(data[0])
-            if not trainer:
-                input_shape = (np.shape(x_train)[-1],) # read number of attributes we have
-                trainer = Trainer(testModel(input_shape), verbose=params.get('verbose', 0))
-            print("x_train {} chunk of {} shape".format(x_train, np.shape(x_train)))
-            if np.shape(x_train)[0] == 0:
-                print("received empty x_train chunk")
-                break
-            # create dummy vector for y's for our x_train
-            y_train = np.random.randint(2, size=np.shape(x_train)[0])
-            y_train = to_categorical(y_train) # convert labesl to categorical values
-            print("y_train {} chunk of {} shape".format(y_train, np.shape(y_train)))
-            kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
-            trainer.fit(data, y_train, **kwds)
+    xfiles = [xfile(f) for f in files]
+    gen = DataGenerator(xfiles, params, specs)
+    epochs = specs.get('epochs', 10)
+    batch_size = specs.get('batch_size', 50)
+    shuffle = specs.get('shuffle', True)
+    split = specs.get('split', 0.3)
+    trainer = False
+    for data in gen:
+        x_train = np.array(data[0])
+        if not trainer:
+            input_shape = (np.shape(x_train)[-1],) # read number of attributes we have
+            trainer = Trainer(testModel(input_shape), verbose=params.get('verbose', 0))
+        print("x_train {} chunk of {} shape".format(x_train, np.shape(x_train)))
+        if np.shape(x_train)[0] == 0:
+            print("received empty x_train chunk")
+            break
+        # create dummy vector for y's for our x_train
+        y_train = np.random.randint(2, size=np.shape(x_train)[0])
+        y_train = to_categorical(y_train) # convert labesl to categorical values
+        print("y_train {} chunk of {} shape".format(y_train, np.shape(y_train)))
+        kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
+        trainer.fit(data, y_train, **kwds)
 
 def testPyTorch(files, params=None, specs=None):
     """
@@ -237,38 +282,36 @@ def testPyTorch(files, params=None, specs=None):
         params = {}
     if not specs:
         specs = {}
-    for fin in files:
-        fin = xfile(fin)
-        gen = DataGenerator(fin, params, specs)
-        epochs = specs.get('epochs', 10)
-        batch_size = specs.get('batch_size', 50)
-        shuffle = specs.get('shuffle', True)
-        split = specs.get('split', 0.3)
-        model = False
-        for (x_train, x_mask) in gen:
-            if not model:
-                input_shape = np.shape(x_train)[-1] # read number of attributes we have
-                print("### input data: {}".format(input_shape))
-                model = torch.nn.Sequential(
-                    JaggedArrayLinear(input_shape, 5),
-                    torch.nn.ReLU(),
-                    torch.nn.Linear(5, 1),
-                )
-                print(model)
-            print("x_train chunk of {} shape".format(np.shape(x_train)))
-            print("x_mask chunk of {} shape".format(np.shape(x_mask)))
-            if np.shape(x_train)[0] == 0:
-                print("received empty x_train chunk")
-                break
-            data = np.array([x_train, x_mask])
-            preds = model(data).data.numpy()
-            print("preds chunk of {} shape".format(np.shape(preds)))
+    xfiles = [xfile(f) for f in files]
+    gen = DataGenerator(xfiles, params, specs)
+    epochs = specs.get('epochs', 10)
+    batch_size = specs.get('batch_size', 50)
+    shuffle = specs.get('shuffle', True)
+    split = specs.get('split', 0.3)
+    model = False
+    for (x_train, x_mask) in gen:
+        if not model:
+            input_shape = np.shape(x_train)[-1] # read number of attributes we have
+            print("### input data: {}".format(input_shape))
+            model = torch.nn.Sequential(
+                JaggedArrayLinear(input_shape, 5),
+                torch.nn.ReLU(),
+                torch.nn.Linear(5, 1),
+            )
+            print(model)
+        print("x_train chunk of {} shape".format(np.shape(x_train)))
+        print("x_mask chunk of {} shape".format(np.shape(x_mask)))
+        if np.shape(x_train)[0] == 0:
+            print("received empty x_train chunk")
+            break
+        data = np.array([x_train, x_mask])
+        preds = model(data).data.numpy()
+        print("preds chunk of {} shape".format(np.shape(preds)))
 
 def main():
     "Main function"
     optmgr  = OptionParser()
     opts = optmgr.parser.parse_args()
-    fin = opts.fin
     params = json.load(open(opts.params))
     specs = json.load(open(opts.specs)) if opts.specs else None
     if os.path.isfile(opts.files):
