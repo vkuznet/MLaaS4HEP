@@ -26,6 +26,9 @@ def timestamp(msg='TFaaS'):
     return '%s %s %s' % (msg.strip(), tstamp, time.mktime(tst))
 
 class DataGenerator(object):
+    """
+    DataGenerator class provides interface to read HEP ROOT files.
+    """
     def __init__(self, fin, params=None, specs=None):
         "Initialization function for Data Generator"
         time0 = time.time()
@@ -114,7 +117,7 @@ class DataGenerator(object):
         return int(np.floor(self.nevts / self.batch_size))
 
     def next(self):
-        "Return next batch of events"
+        "Return next batch of events in form of data and mask vectors"
         msg = "\nread chunk [{}:{}] from {}".format(self.start_idx, self.stop_idx, self.current_file)
         gen = self.read_data(self.start_idx, self.stop_idx)
         # advance start and stop indecies
