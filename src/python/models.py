@@ -94,8 +94,8 @@ def train_model(model, files, params=None, specs=None, fout=None):
             print("received empty x_train chunk")
             break
         if not trainer:
-            input_shape = (np.shape(x_train)[-1],) # read number of attributes we have
-            trainer = Trainer(model(input_shape), verbose=params.get('verbose', 0))
+            idim = np.shape(x_train)[-1] # read number of attributes we have
+            trainer = Trainer(model(idim), verbose=params.get('verbose', 0))
 
         # TODO: the y_train should be given us externally, so far we create it as random values
         # create dummy vector for y's for our x_train
