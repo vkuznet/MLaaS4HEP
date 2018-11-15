@@ -7,6 +7,10 @@ Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
 Description: this module defines user based ML models for workflow
 """
 
+# system modules
+import os
+import sys
+
 # numpy modules
 import numpy as np
 
@@ -41,8 +45,23 @@ class Trainer(object):
         "Predict function of the trainer"
         pass
 
-def load_model(model):
-    pass
+def load_model(mfile):
+    """
+    Load model from given pyton module (file)
+
+    :param mfile: the python module name which implements model function
+    """
+    mname = mfile.split('.py')[0].replace('/', '.')
+    try:
+        mod = __import__(mname, fromlist=['model'])
+        print("loaded {} {} {}".format(mfile, mod.model, mod.model.__doc__))
+        return mod.model
+    except ImportError:
+        traceback.print_exc()
+        msg = "Please provide python module which implements model function.\n"
+        msg += "The input file name should be visible through PYTHONPATH"
+        print(msg)
+        raise
 
 def train_model(model, files, params=None, specs=None, fout=None):
     """
@@ -174,12 +193,13 @@ def test_PyTorch(files, params=None, specs=None):
         print("preds chunk of {} shape".format(np.shape(preds)))
 
 
-def test():
+def test(mname):
     input_shape = (10,)
     model = test_Keras_model(input_shape)
     print(type(model))
     model = test_PyTorch_model(input_shape[0])
     print(type(model))
+    model = load_model(mname)
 
 if __name__ == '__main__':
-    test()
+    test(sys.argv[1])
