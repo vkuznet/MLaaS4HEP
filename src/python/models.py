@@ -96,11 +96,15 @@ def train_model(model, files, params=None, specs=None, fout=None):
         if not trainer:
             input_shape = (np.shape(x_train)[-1],) # read number of attributes we have
             trainer = Trainer(model(input_shape), verbose=params.get('verbose', 0))
+
+        # TODO: the y_train should be given us externally, so far we create it as random values
         # create dummy vector for y's for our x_train
+        from keras.utils import to_categorical
         y_train = np.random.randint(2, size=np.shape(x_train)[0])
         y_train = to_categorical(y_train) # convert labesl to categorical values
         print("y_train {} chunk of {} shape".format(y_train, np.shape(y_train)))
         kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
+
         trainer.fit(data, y_train, **kwds)
     if fout:
         trainer.save(fout)
