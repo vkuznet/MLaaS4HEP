@@ -24,7 +24,7 @@ class OptionParser():
         "User based option parser"
         self.parser = argparse.ArgumentParser(prog='PROG')
         self.parser.add_argument("--model", action="store",
-            dest="model", default=None, help="Input model")
+            dest="model", default=None, help="Input model file, see ex_keras.py or ex_pytorch.py for examples")
         self.parser.add_argument("--params", action="store",
             dest="params", default="params.json",
             help="Input model parameters (default params.json)")
