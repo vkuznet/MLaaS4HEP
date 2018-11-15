@@ -381,11 +381,20 @@ class DataReader(object):
         msg = ''
         time0 = time.time()
 
+        # if self.nevnts=0 we'll use 2x self.chunk_size to determine
+        # the dimensions otherwise job waits too long to possibly scan
+        # all events in a file which can be too large.
+        nrows = self.nrows
+        if not self.nevts:
+            nrows = 2*self.chunk_size
+            if self.verbose:
+                print("# will use {} events to obtain dimensionality".format(nrows))
+
         # scan all rows to find out largest jagged array dimension
         tot = 0
         set_branches = True
         set_min_max = True
-        for chunk in steps(self.nrows, self.chunk_size):
+        for chunk in steps(nrows, self.chunk_size):
             nevts = len(chunk) # chunk here contains event indexes
             tot += nevts
             self.read_chunk(nevts, set_branches=set_branches, set_min_max=set_min_max)
@@ -399,7 +408,11 @@ class DataReader(object):
             if self.nevts > 0 and tot > self.nevts:
                 break
 
-        self.nevts = tot
+        # if we've been asked to read all or zero events we determine
+        # number of events as all available rows in TTree which is set as
+        # self.tree.numentries in __init__
+        if self.nevts < 1:
+            self.nevts = self.nrows
 
         # initialize all nan values (zeros) in normalize phase-space
         # this should be done after we get all min/max values
