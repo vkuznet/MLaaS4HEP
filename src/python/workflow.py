@@ -17,7 +17,7 @@ import argparse
 # MLaaS4HEP modules
 from reader import DataReader
 from generator import DataGenerator
-from models import train_model, load_model, test_Keras, test_PyTorch
+from models import train_model, load_model
 
 class OptionParser():
     def __init__(self):
@@ -36,9 +36,6 @@ class OptionParser():
         self.parser.add_argument("--fout", action="store",
             dest="fout", default=None,
             help="output file name to save pre-trained model")
-        self.parser.add_argument("--test", action="store",
-            dest="test", default='pytorch',
-            help="test given model (pytorch, keras, tensorflow), default pytorch")
 
 def main():
     "Main function"
@@ -53,14 +50,6 @@ def main():
     if opts.model:
         train_model(opts.model, files, params, specs, opts.fout)
         return
-    if opts.test.lower() == 'pytorch':
-        # test PyTorch model training with HEP ROOT I/O
-        test_PyTorch(files, params, specs)
-    elif opts.test.lower() == 'keras':
-        # test Keras model training with HEP ROOT I/O
-        test_Keras(files, params, specs)
-    elif opts.test.lower() == 'tensorflow':
-        raise NotImplemented
 
 if __name__ == '__main__':
     main()
