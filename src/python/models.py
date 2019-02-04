@@ -20,6 +20,9 @@ import sys
 # numpy modules
 import numpy as np
 
+# pytorch modules
+import torch
+
 # MLaaS4HEP modules
 from reader import xfile
 from generator import DataGenerator
@@ -63,6 +66,15 @@ class Trainer(object):
     def predict(self):
         "Predict API of the trainer"
         raise NotImplemented
+
+    def save(self, fout):
+        "Save our model to given file"
+        if self.cls_model.find('keras') != -1:
+            self.model.save(fout)
+        elif self.cls_model.find('torch') != -1:
+            torch.save(self.model, fout)
+        else:
+            raise NotImplemented
 
 def load_model(mfile):
     """
@@ -126,5 +138,5 @@ def train_model(model, files, labels, params=None, specs=None, fout=None):
         kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
 
         trainer.fit(data, y_train, **kwds)
-    if fout:
+    if fout and hasattr(trainer, 'save'):
         trainer.save(fout)
