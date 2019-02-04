@@ -72,14 +72,14 @@ simple as
 ```
 ./workflow.py --help
 
-# run the code with list of LFNs from files.txt
-./workflow.py --files=files.txt
+# run the code with list of LFNs from files.txt and using labels file labels.txt
+./workflow.py --files=files.txt --labels=labels.txt
 
 # run pytorch example
-./workflow.py --files=files.txt --model=ex_pytorch.py
+./workflow.py --files=files.txt --labels=labels.txt --model=ex_pytorch.py
 
 # run keras example
-./workflow.py --files=files.txt --model=ex_keras.py
+./workflow.py --files=files.txt --labels=labels.txt --model=ex_keras.py
 
 # cat files.txt
 #dasgoclient -query="file dataset=/Tau/Run2018C-14Sep2018_ver3-v1/NANOAOD"
@@ -90,6 +90,18 @@ simple as
 /store/data/Run2018C/Tau/NANOAOD/14Sep2018_ver3-v1/60000/D1E05C97-DB14-3941-86E8-C510D602C0B9.root
 /store/data/Run2018C/Tau/NANOAOD/14Sep2018_ver3-v1/60000/6FA4CC7C-8982-DE4C-BEED-C90413312B35.root
 /store/data/Run2018C/Tau/NANOAOD/14Sep2018_ver3-v1/60000/282E0083-6B41-1F42-B665-973DF8805DE3.root
+
+# cat labels.txt
+1
+0
+1
+0
+1
+1
+1
+
+# run keras example and save our model into external file
+./workflow.py --files=files.txt --labels=labels.txt --model=ex_keras.py --fout=model.pb
 ```
 
 The `workflow.py` relies on two JSON files, one which contains parameters for
