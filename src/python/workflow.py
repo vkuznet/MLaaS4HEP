@@ -31,8 +31,11 @@ class OptionParser():
         self.parser.add_argument("--specs", action="store",
             dest="specs", default=None, help="Input specs file")
         self.parser.add_argument("--files", action="store",
-            dest="files", default=None,
+            dest="files", default='',
             help="either input file with files names or comma separate list of files")
+        self.parser.add_argument("--labels", action="store",
+            dest="labels", default='',
+            help="either input file with labels names/ids or comma separate list of labels")
         self.parser.add_argument("--fout", action="store",
             dest="fout", default=None,
             help="output file name to save pre-trained model")
@@ -43,12 +46,23 @@ def main():
     opts = optmgr.parser.parse_args()
     params = json.load(open(opts.params))
     specs = json.load(open(opts.specs)) if opts.specs else None
+    if not opts.files:
+        print('No files is provided')
+        sys.exit(1)
     if os.path.isfile(opts.files):
         files = [f.replace('\n', '') for f in open(opts.files).readlines() if not f.startswith('#')]
     else:
         files = opts.files.split(',')
+    if not opts.labels:
+        print('No labels is provided')
+        sys.exit(1)
+    if os.path.isfile(opts.labels):
+        labels = [f.replace('\n', '') for f in open(opts.labels).readlines() if not f.startswith('#')]
+    else:
+        labels = opts.labels.split(',')
+
     if opts.model:
-        train_model(opts.model, files, params, specs, opts.fout)
+        train_model(opts.model, files, labels, params, specs, opts.fout)
         return
 
 if __name__ == '__main__':

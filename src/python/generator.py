@@ -29,7 +29,7 @@ class DataGenerator(object):
     """
     DataGenerator class provides interface to read HEP ROOT files.
     """
-    def __init__(self, fin, params=None, specs=None):
+    def __init__(self, fin, labels, params=None, specs=None):
         "Initialization function for Data Generator"
         time0 = time.time()
         if not params:
@@ -53,6 +53,13 @@ class DataGenerator(object):
             self.files = fin
         else:
             raise Exception("Unsupported data-type '%s' for fin parameter" % type(fin))
+        if isinstance(labels, str):
+            self.labels = [labels]
+        elif isinstance(labels, list):
+            self.labels = labels
+        else:
+            raise Exception("Unsupported data-type '%s' for labels parameter" % type(labels))
+        self.file_label_dict = dict(zip(self.files, self.labels))
 
         self.reader = {} # global reader will handle all files readers
         self.reader_counter = {} # reader counter keeps track of nevts read by readers
@@ -118,7 +125,7 @@ class DataGenerator(object):
 
     def next(self):
         "Return next batch of events in form of data and mask vectors"
-        msg = "\nread chunk [{}:{}] from {}".format(self.start_idx, self.stop_idx, self.current_file)
+        msg = "\nread chunk [{}:{}] from {} label {}".format(self.start_idx, self.stop_idx, self.current_file, self.file_label_dict[self.current_file])
         gen = self.read_data(self.start_idx, self.stop_idx)
         # advance start and stop indecies
         self.start_idx = self.stop_idx
@@ -135,7 +142,9 @@ class DataGenerator(object):
         for (xdf, mdf) in gen:
             data.append(xdf)
             mask.append(mdf)
-        return np.array(data), np.array(mask)
+        label = self.file_label_dict[self.current_file]
+        labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
+        return np.array(data), np.array(mask), labels
 
     def __iter__(self):
         "Provide iterator capabilities to the class"

@@ -82,7 +82,7 @@ def load_model(mfile):
         print(msg)
         raise
 
-def train_model(model, files, params=None, specs=None, fout=None):
+def train_model(model, files, labels, params=None, specs=None, fout=None):
     """
     Train given model on set of files, params, specs
 
@@ -98,7 +98,7 @@ def train_model(model, files, params=None, specs=None, fout=None):
         specs = {}
     model = load_model(model)
     xfiles = [xfile(f) for f in files]
-    gen = DataGenerator(xfiles, params, specs)
+    gen = DataGenerator(xfiles, labels, params, specs)
     epochs = specs.get('epochs', 10)
     batch_size = specs.get('batch_size', 50)
     shuffle = specs.get('shuffle', True)
@@ -107,6 +107,7 @@ def train_model(model, files, params=None, specs=None, fout=None):
     for data in gen:
         x_train = data[0]
         x_mask = data[1]
+        y_train = data[2]
         print("x_train chunk of {} shape".format(np.shape(x_train)))
         print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         if np.shape(x_train)[0] == 0:
@@ -118,9 +119,9 @@ def train_model(model, files, params=None, specs=None, fout=None):
 
         # TODO: the y_train should be given us externally, so far we create it as random values
         # create dummy vector for y's for our x_train
-        from keras.utils import to_categorical
-        y_train = np.random.randint(2, size=np.shape(x_train)[0])
-        y_train = to_categorical(y_train) # convert labesl to categorical values
+#         from keras.utils import to_categorical
+#         y_train = np.random.randint(2, size=np.shape(x_train)[0])
+#         y_train = to_categorical(y_train) # convert labesl to categorical values
         print("y_train {} chunk of {} shape".format(y_train, np.shape(y_train)))
         kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
 
