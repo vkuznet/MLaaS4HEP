@@ -16,16 +16,22 @@ APIs to fit the model and yield predictions.
 # system modules
 import os
 import sys
+import traceback
 
 # numpy modules
 import numpy as np
 
+# keras modules
+from keras.utils import to_categorical
+
 # pytorch modules
-import torch
+try:
+    import torch
+except:
+    torch = None
 
 # MLaaS4HEP modules
-from reader import xfile
-from generator import DataGenerator
+from generator import RootDataGenerator, MetaDataGenerator, file_type
 
 class Trainer(object):
     """
@@ -71,7 +77,7 @@ class Trainer(object):
         "Save our model to given file"
         if self.cls_model.find('keras') != -1:
             self.model.save(fout)
-        elif self.cls_model.find('torch') != -1:
+        elif self.cls_model.find('torch') != -1 and torch:
             torch.save(self.model, fout)
         else:
             raise NotImplemented
@@ -109,33 +115,35 @@ def train_model(model, files, labels, params=None, specs=None, fout=None):
     if not specs:
         specs = {}
     model = load_model(model)
-    xfiles = [xfile(f) for f in files]
-    gen = DataGenerator(xfiles, labels, params, specs)
+    if file_type(files) == 'root':
+        gen = RootDataGenerator(files, labels, params, specs)
+    else:
+        gen = MetaDataGenerator(files, labels, params, specs)
     epochs = specs.get('epochs', 10)
     batch_size = specs.get('batch_size', 50)
     shuffle = specs.get('shuffle', True)
     split = specs.get('split', 0.3)
     trainer = False
+    kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
     for data in gen:
-        x_train = data[0]
-        x_mask = data[1]
-        y_train = data[2]
+        if len(data) == 2:
+            x_train = data[0]
+            y_train = data[1]
+        elif len(data) == 3: # ROOT data with mask array
+            x_train = data[0]
+            x_mask = data[1]
+            y_train = data[2]
+            print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         print("x_train chunk of {} shape".format(np.shape(x_train)))
-        print("x_mask chunk of {} shape".format(np.shape(x_mask)))
+        print("y_train chunk of {} shape".format(np.shape(y_train)))
+        # convert y_train to categorical array
+        y_train = to_categorical(y_train)
         if np.shape(x_train)[0] == 0:
             print("received empty x_train chunk")
             break
         if not trainer:
             idim = np.shape(x_train)[-1] # read number of attributes we have
             trainer = Trainer(model(idim), verbose=params.get('verbose', 0))
-
-        # TODO: the y_train should be given us externally, so far we create it as random values
-        # create dummy vector for y's for our x_train
-#         from keras.utils import to_categorical
-#         y_train = np.random.randint(2, size=np.shape(x_train)[0])
-#         y_train = to_categorical(y_train) # convert labesl to categorical values
-        print("y_train {} chunk of {} shape".format(y_train, np.shape(y_train)))
-        kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
 
         trainer.fit(data, y_train, **kwds)
     if fout and hasattr(trainer, 'save'):

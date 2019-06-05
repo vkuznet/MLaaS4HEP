@@ -17,15 +17,169 @@ import random
 import numpy as np
 
 # MLaaS4HEP modules
-from reader import DataReader
+from reader import RootDataReader, JSONReader, CSVReader, AvroReader
 
-def timestamp(msg='TFaaS'):
+def timestamp(msg='MLaaS4HEP'):
     "Return timestamp in pre-defined format"
     tst = time.localtime()
     tstamp = time.strftime('[%d/%b/%Y:%H:%M:%S]', tst)
     return '%s %s %s' % (msg.strip(), tstamp, time.mktime(tst))
 
-class DataGenerator(object):
+def file_type(fin):
+    "Return file type of given object"
+    if isinstance(fin, list):
+        fin = fin[0]
+    for ext in ['root', 'avro']:
+        if fin.endswith(ext):
+            return ext
+    for ext in ['json', 'csv']:
+        if fin.endswith(ext) or fin.endswith('%s.gz' % ext) or fin.endswith('%s.bz2' % ext):
+            return ext
+
+class MetaDataGenerator(object):
+    """
+    MetaDataGenerator class provides interface to read files.
+    """
+    def __init__(self, fin, labels, params=None, specs=None, mtype=None):
+        "Initialization function for Data Generator"
+        time0 = time.time()
+        self.mtype = str(mtype).lower()
+        if not params:
+            params = {}
+        # parse given parameters
+        batch_size = params.get('batch_size', 256)
+        verbose = params.get('verbose', 0)
+        chunk_size = params.get('chunk_size', 1000)
+        self.evts = params.get('nevts', -1)
+        self.shuffle = params.get('shuffle', False)
+        self.drop = params.get('drop', [])
+
+        # convert input fin parameter into file list if necessary
+        if isinstance(fin, str):
+            self.files = [fin]
+        elif isinstance(fin, list):
+            self.files = fin
+        else:
+            raise Exception("Unsupported data-type '%s' for fin parameter" % type(fin))
+        if isinstance(labels, str):
+            self.labels = [labels]
+        elif isinstance(labels, list):
+            self.labels = labels
+        else:
+            raise Exception("Unsupported data-type '%s' for labels parameter" % type(labels))
+        self.file_label_dict = dict(zip(self.files, self.labels))
+
+        self.reader = {} # global reader will handle all files readers
+        self.reader_counter = {} # reader counter keeps track of nevts read by readers
+
+        if verbose:
+            print(timestamp('Generator: {}'.format(self)))
+            print("model parameters: {}".format(json.dumps(params)))
+
+        self.start_idx = 0
+        self.chunk_size = chunk_size
+        self.stop_idx = chunk_size
+        self.batch_size = batch_size
+        self.verbose = verbose
+
+        # loop over files and create individual readers for them, then put them in a global reader
+        for fname in self.files:
+            if self.mtype == 'json' or file_type(fname) == 'json':
+                reader = JSONReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
+            elif self.mtype == 'csv' or file_type(fname) == 'csv':
+                reader = CSVReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
+            elif self.mtype == 'avro' or file_type(fname) == 'avro':
+                reader = AvroReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
+            self.reader[fname] = reader
+            self.reader_counter[fname] = 0
+
+        self.current_file = self.files[0]
+
+        print("init MetaDataGenerator in {} sec".format(time.time()-time0))
+
+    @property
+    def nevts(self):
+        "Return number of events of current file"
+        return self.evts if self.evts != -1 else self.reader[self.current_file].nrows
+         
+    def __len__(self):
+        "Return total number of batches this generator can deliver"
+        return int(np.floor(self.nevts / self.batch_size))
+
+    def next(self):
+        "Return next batch of events"
+        msg = "\nread chunk [{}:{}] from {} label {}".format(self.start_idx, self.stop_idx, self.current_file, self.file_label_dict[self.current_file])
+        gen = self.read_data(self.start_idx, self.stop_idx)
+        # advance start and stop indecies
+        self.start_idx = self.stop_idx
+        self.stop_idx = self.start_idx+self.chunk_size
+        if self.nevts != -1 and \
+           (self.start_idx > self.nevts or self.start_idx > self.reader[self.current_file].nrows):
+            # we reached the limit of the reader
+            self.start_idx = 0
+            self.stop_idx = self.chunk_size
+            raise StopIteration
+        if self.verbose:
+            print(msg)
+        data = []
+        for xdf in gen:
+            for row in xdf:
+                data.append(row)
+        if not data:
+            raise StopIteration
+        label = self.file_label_dict[self.current_file]
+        labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
+        data = np.array(data)
+        if self.verbose:
+            print("return shapes: data=%s labels=%s" % (np.shape(data), np.shape(labels)))
+        return data, labels
+
+    def __iter__(self):
+        "Provide iterator capabilities to the class"
+        return self
+
+    def __next__(self):
+        "Provide generator capabilities to the class"
+        return self.next()
+
+    def read_data(self, start=0, stop=100, verbose=0):
+        "Helper function to read data via reader"
+        # if we exceed number of events in a file we discard it
+        if self.nevts < self.reader_counter[self.current_file]:
+            if self.verbose:
+                msg = "# discard {} since we read {} out of {} events"\
+                        .format(self.current_file, \
+                        self.reader_counter[self.current_file], self.nevts)
+                print(msg)
+            self.files.remove(self.current_file)
+            if len(self.files):
+                self.current_file = self.files[0]
+            else:
+                print("# no more files to read from")
+                raise StopIteration
+        if self.shuffle:
+            idx = random.randint(0, len(self.files)-1)
+            self.current_file = self.files[idx]
+        current_file = self.current_file
+        reader = self.reader[current_file]
+        if stop == -1:
+            for _ in range(reader.nrows):
+                data = reader.next(verbose=verbose)
+                yield data
+            read_evts = reader.nrows
+        else:
+            for _ in range(start, stop):
+                xdf = reader.next(verbose=verbose)
+                yield xdf
+                read_evts = stop-start
+        # update how many events we read from current file
+        self.reader_counter[self.current_file] += read_evts
+        if self.verbose:
+            nevts = self.reader_counter[self.current_file]
+            msg = "\ntotal read {} evts from {}".format(nevts, current_file)
+            print(msg)
+
+class RootDataGenerator(object):
     """
     DataGenerator class provides interface to read HEP ROOT files.
     """
@@ -94,7 +248,7 @@ class DataGenerator(object):
                         print("loading specs {}".format(sname))
                     specs = json.load(open(sname))
 
-            reader = DataReader(fname, branch=branch, selected_branches=branches,
+            reader = RootDataReader(fname, branch=branch, selected_branches=branches,
                 exclude_branches=exclude_branches, nan=nan,
                 chunk_size=chunk_size, nevts=0, specs=specs,
                 redirector=redirector, verbose=verbose)
@@ -112,7 +266,7 @@ class DataGenerator(object):
 
         self.current_file = self.files[0]
 
-        print("init DataGenerator in {} sec".format(time.time()-time0))
+        print("init RootDataGenerator in {} sec".format(time.time()-time0))
 
     @property
     def nevts(self):

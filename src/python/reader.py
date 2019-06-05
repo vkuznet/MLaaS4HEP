@@ -21,22 +21,32 @@ import random
 import argparse
 import traceback
 
+# for managing compressed files
+import gzip
+try:
+    import bz2
+except ImportError:
+    pass
+
 # numpy
 import numpy as np
 
 # uproot
-import uproot
 try:
-    # uproot verion 3.X
-    from awkward import JaggedArray
-except:
-    # uproot verion 2.X
-    from uproot.interp.jagged import JaggedArray
+    import uproot
+    try:
+        # uproot verion 3.X
+        from awkward import JaggedArray
+    except:
+        # uproot verion 2.X
+        from uproot.interp.jagged import JaggedArray
+except ImportError:
+    pass
 
 # numba
 try:
     from numba import jit
-except:
+except ImportError:
     def jit(f):
         "Simple decorator which calls underlying function"
         def new_f():
@@ -47,7 +57,7 @@ except:
 # psutil
 try:
     import psutil
-except:
+except ImportError:
     psutil = None
 
 # histogrammar
@@ -185,9 +195,144 @@ def min_max_arr(arr):
     except ValueError:
         return 1e15, -1e15
 
-class DataReader(object):
+def fopen(fin, mode='r'):
+    "Return file descriptor for given file"
+    if  fin.endswith('.gz'):
+        stream = gzip.open(fin, mode)
+    elif  fin.endswith('.bz2'):
+        stream = bz2.BZ2File(fin, mode)
+    else:
+        stream = open(fin, mode)
+    return stream
+
+class JSONReader(object):
     """
-    DataReader class provide interface to read ROOT files
+    JSONReader represents interface to read JSON file.
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[]): 
+        if hasattr(fin, 'readline'): # we already given a file descriptor
+            self.istream = fin
+        else:
+            self.istream = fopen(fin, 'r')
+        self.keys = None
+        self.chunk_size = chunk_size
+        self.nrows = nevts
+        self.drop = drop
+
+    def __exit__(self):
+        "Exit function for our class"
+        if hasattr(self.istream, 'close'):
+            self.istream.close()
+
+    @property
+    def columns(self):
+        "Return names of columns of our data"
+        return self.keys
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        for idx in range(self.chunk_size):
+            line = self.istream.readline()
+            if not line:
+                continue
+            rec = json.loads(line)
+            if not rec:
+                continue
+            if not self.keys:
+                self.keys = [k for k in sorted(rec.keys()) if k not in self.drop]
+            if self.keys != sorted(rec.keys()):
+                rkeys = sorted(rec.keys())
+                msg = 'WARNING: record %s contains different set of keys from original ones\n' % idx
+                msg += 'original keys : %s\n' % json.dumps(self.keys)
+                msg += 'record   keys : %s\n' % json.dumps(rkeys)
+                if len(self.keys) > len(rkeys):
+                    diff = set(self.keys)-set(rkeys)
+                    msg += 'orig-rkeys diff: %s\n' % diff
+                else:
+                    diff = set(rkeys)-set(self.keys)
+                    msg += 'rkeys-orig diff: %s\n' % diff
+                if verbose:
+                    print(msg)
+            data = [rec.get(k, 0) for k in self.keys]
+            yield np.array(data)
+
+class CSVReader(object):
+    """
+    CSVReader represents interface to read CSV file.
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[], headers=None, separator=','): 
+        if hasattr(fin, 'readline'): # we already given a file descriptor
+            self.istream = fin
+        else:
+            self.istream = fopen(fin, 'r')
+        self.headers = headers
+        self.keys = headers if headers else None
+        self.sep = sep
+        self.chunk_size = chunk_size
+        self.nrows = nevts
+        self.drop = drop
+
+    def __exit__(self):
+        "Exit function for our class"
+        if hasattr(self.istream, 'close'):
+            self.istream.close()
+
+    @property
+    def columns(self):
+        "Return names of columns of our data"
+        return self.keys
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        for idx in range(self.chunk_size):
+            line = self.istream.readline()
+            if not line:
+                continue
+            row = line.split(self.sep)
+            if not rec:
+                continue
+            if not self.keys:
+                self.keys = [k for k in sorted(row) if k not in self.drop]
+                continue
+            rec = dict(zip(self.keys, row))
+            if self.keys != sorted(rec.keys()):
+                msg = 'WARNING: record %s contains different set of keys from original ones' % idx
+                if verbose:
+                    print(msg)
+            data = [rec.get(k, 0) for k in self.keys]
+            yield np.array(data)
+
+class AvroReader(object):
+    """
+    AvroReader represents interface to read Avro file.
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[]): 
+        if hasattr(fin, 'readline'): # we already given a file descriptor
+            self.istream = fin
+        else:
+            self.istream = open(fin, 'r')
+        self.keys = None
+        self.chunk_size = chunk_size
+        self.nrows = nevts
+        self.drop = drop
+
+    def __exit__(self):
+        "Exit function for our class"
+        if hasattr(self.istream, 'close'):
+            self.istream.close()
+
+    @property
+    def columns(self):
+        "Return names of columns of our data"
+        return self.keys
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        raise NotImplemented
+
+class RootDataReader(object):
+    """
+    RootDataReader class provide interface to read ROOT files
     and APIs to access its data. It uses two-pass procedure
     unless specs file is provided. The first pass parse entire
     file and identifies flat/jagged keys, their dimensionality
@@ -750,7 +895,7 @@ def main():
             exclude_branches = opts.exclude_branches.split(',')
     hists = opts.hists
     identifier = [k.strip() for k in opts.identifier.split(',')]
-    reader = DataReader(fin, branch=branch, selected_branches=branches,
+    reader = RootDataReader(fin, branch=branch, selected_branches=branches,
             identifier=identifier, exclude_branches=exclude_branches, histograms=hists,
             nan=nan, chunk_size=chunk_size,
             nevts=nevts, specs=specs, redirector=opts.redirector, verbose=verbose)

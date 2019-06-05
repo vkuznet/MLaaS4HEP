@@ -15,8 +15,6 @@ import time
 import argparse
 
 # MLaaS4HEP modules
-from reader import DataReader
-from generator import DataGenerator
 from models import train_model, load_model
 
 class OptionParser():
@@ -44,7 +42,10 @@ def main():
     "Main function"
     optmgr  = OptionParser()
     opts = optmgr.parser.parse_args()
-    params = json.load(open(opts.params))
+    if opts.params and os.path.exists(opts.params):
+        params = json.load(open(opts.params))
+    else:
+        params = {}
     specs = json.load(open(opts.specs)) if opts.specs else None
     if not opts.files:
         print('No files is provided')
