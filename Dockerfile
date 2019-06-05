@@ -21,8 +21,8 @@ RUN /opt/conda/bin/conda install -c conda-forge backports.lzma -y
 RUN /opt/conda/bin/conda install pytorch -y
 
 # install fastai
-RUN /opt/conda/bin/conda install -c pytorch pytorch-nightly-cpu
-RUN /opt/conda/bin/conda install -c fastai torchvision-nightly-cpu
+RUN /opt/conda/bin/conda install -c pytorch pytorch-cpu
+RUN /opt/conda/bin/conda install torchvision
 RUN /opt/conda/bin/conda install -c fastai fastai
 
 # Create new user account
