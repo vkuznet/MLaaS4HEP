@@ -28,8 +28,19 @@ try:
 except ImportError:
     pass
 
-# numpy
+# numpy modules
 import numpy as np
+
+# pandas modules
+pd = None
+try:
+    # https://github.com/modin-project/modin
+    import modin.pandas as pd
+except ImportError:
+    try:
+        import pandas as pd
+    except ImportError:
+        pass
 
 # uproot
 try:
@@ -69,6 +80,12 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     hg = None
+
+# try spark context
+try:
+    sc = spark.sparkContext
+except:
+    spark = None
 
 class OptionParser():
     def __init__(self):
@@ -204,6 +221,39 @@ def fopen(fin, mode='r'):
     else:
         stream = open(fin, mode)
     return stream
+
+class HDFSJSONReader(object):
+    """
+    HDFSJSONReader represents interface to read JSON file from HDFS.
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[]):
+        if spark:
+            xdf = spark.read.json(fin)
+            print(xdf.printSchema())
+            # this will work on small-ish files, we need to figure out
+            # how to properly read chunk of data from Spark DataFrame
+            self.xdf = xdf.toPandas()
+        else:
+            raise Exception("Spark is not available")
+        self.keys = xdf.columns
+        self.chunk_size = chunk_size
+        self.nrows = nevts
+        self.drop = drop
+        self.pos = 0
+
+    def __exit__(self):
+        "Exit function for our class"
+        pass
+
+    @property
+    def columns(self):
+        "Return names of columns of our data"
+        return self.keys
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        # TODO: find out which indexes to use
+        yield self.xdf.values
 
 class JSONReader(object):
     """
