@@ -43,10 +43,11 @@ class MetaDataGenerator(object):
     """
     MetaDataGenerator class provides interface to read files.
     """
-    def __init__(self, fin, labels, params=None, specs=None, mtype=None):
+    def __init__(self, fin, labels, params=None, specs=None, preproc=None, dtype=None):
         "Initialization function for Data Generator"
         time0 = time.time()
-        self.mtype = str(mtype).lower()
+        self.dtype = str(dtype).lower()
+        self.preproc = preproc
         if not params:
             params = {}
         # parse given parameters
@@ -55,7 +56,6 @@ class MetaDataGenerator(object):
         chunk_size = params.get('chunk_size', 1000)
         self.evts = params.get('nevts', -1)
         self.shuffle = params.get('shuffle', False)
-        self.drop = params.get('drop', [])
 
         # convert input fin parameter into file list if necessary
         if isinstance(fin, str):
@@ -87,14 +87,14 @@ class MetaDataGenerator(object):
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
-            if self.mtype == 'hdfs-json' or file_type(fname) == 'hdfs-json':
-                reader = HDFSJSONReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
-            if self.mtype == 'json' or file_type(fname) == 'json':
-                reader = JSONReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
-            elif self.mtype == 'csv' or file_type(fname) == 'csv':
-                reader = CSVReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
-            elif self.mtype == 'avro' or file_type(fname) == 'avro':
-                reader = AvroReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
+            if self.dtype == 'hdfs-json' or file_type(fname) == 'hdfs-json':
+                reader = HDFSJSONReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
+            if self.dtype == 'json' or file_type(fname) == 'json':
+                reader = JSONReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
+            elif self.dtype == 'csv' or file_type(fname) == 'csv':
+                reader = CSVReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
+            elif self.dtype == 'avro' or file_type(fname) == 'avro':
+                reader = AvroReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
 
