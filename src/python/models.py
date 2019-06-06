@@ -124,10 +124,10 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         gen = RootDataGenerator(files, labels, params, specs)
     else:
         gen = MetaDataGenerator(files, labels, params, specs, preproc, dtype)
-    epochs = specs.get('epochs', 10)
-    batch_size = specs.get('batch_size', 50)
-    shuffle = specs.get('shuffle', True)
-    split = specs.get('split', 0.3)
+    epochs = params.get('epochs', 10)
+    batch_size = params.get('batch_size', 50)
+    shuffle = params.get('shuffle', True)
+    split = params.get('split', 0.3)
     trainer = False
     kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
     for data in gen:
@@ -143,6 +143,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         print("y_train chunk of {} shape".format(np.shape(y_train)))
         # convert y_train to categorical array
         y_train = to_categorical(y_train)
+        print("y_train chunk of {} shape".format(np.shape(y_train)))
         if np.shape(x_train)[0] == 0:
             print("received empty x_train chunk")
             break
