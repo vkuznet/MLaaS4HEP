@@ -15,14 +15,18 @@ import time
 import argparse
 
 # MLaaS4HEP modules
-from models import train_model, load_model
+from models import train_model
 
 class OptionParser():
     def __init__(self):
         "User based option parser"
         self.parser = argparse.ArgumentParser(prog='PROG')
         self.parser.add_argument("--model", action="store",
-            dest="model", default=None, help="Input model file, see ex_keras.py or ex_pytorch.py for examples")
+            dest="model", default=None,
+            help="Input model file, see ex_keras.py or ex_pytorch.py for examples")
+        self.parser.add_argument("--preproc", action="store",
+            dest="preproc", default=None,
+            help="Input preprocessing file")
         self.parser.add_argument("--params", action="store",
             dest="params", default="params.json",
             help="Input model parameters (default params.json)")
@@ -31,6 +35,9 @@ class OptionParser():
         self.parser.add_argument("--files", action="store",
             dest="files", default='',
             help="either input file with files names or comma separate list of files")
+        self.parser.add_argument("--dtype", action="store",
+            dest="dtype", default=None,
+            help="specify data type of files: (hdfs-)/json, csv, avro")
         self.parser.add_argument("--labels", action="store",
             dest="labels", default='',
             help="either input file with labels names/ids or comma separate list of labels")
@@ -63,7 +70,7 @@ def main():
         labels = opts.labels.split(',')
 
     if opts.model:
-        train_model(opts.model, files, labels, params, specs, opts.fout)
+        train_model(opts.model, files, labels, opts.preproc, params, specs, opts.fout, opts.dtype)
         return
 
 if __name__ == '__main__':
