@@ -52,7 +52,7 @@ class MetaDataGenerator(object):
             params = {}
         # parse given parameters
         batch_size = params.get('batch_size', 256)
-        verbose = params.get('verbose', 0)
+        self.verbose = params.get('verbose', 0)
         chunk_size = params.get('chunk_size', 1000)
         self.evts = params.get('nevts', -1)
         self.shuffle = params.get('shuffle', False)
@@ -75,7 +75,7 @@ class MetaDataGenerator(object):
         self.reader = {} # global reader will handle all files readers
         self.reader_counter = {} # reader counter keeps track of nevts read by readers
 
-        if verbose:
+        if self.verbose:
             print(timestamp('Generator: {}'.format(self)))
             print("model parameters: {}".format(json.dumps(params)))
 
@@ -83,7 +83,6 @@ class MetaDataGenerator(object):
         self.chunk_size = chunk_size
         self.stop_idx = chunk_size
         self.batch_size = batch_size
-        self.verbose = verbose
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
@@ -101,6 +100,9 @@ class MetaDataGenerator(object):
         self.current_file = self.files[0]
 
         print("init MetaDataGenerator in {} sec".format(time.time()-time0))
+        print("available readers")
+        for fname, reader in self.reader.items():
+            print("{} {}".format(fname, reader))
 
     @property
     def nevts(self):
@@ -114,7 +116,7 @@ class MetaDataGenerator(object):
     def next(self):
         "Return next batch of events"
         msg = "\nread chunk [{}:{}] from {} label {}".format(self.start_idx, self.stop_idx, self.current_file, self.file_label_dict[self.current_file])
-        gen = self.read_data(self.start_idx, self.stop_idx)
+        gen = self.read_data(self.start_idx, self.stop_idx, verbose=self.verbose)
         # advance start and stop indecies
         self.start_idx = self.stop_idx
         self.stop_idx = self.start_idx+self.chunk_size
@@ -128,8 +130,7 @@ class MetaDataGenerator(object):
             print(msg)
         data = []
         for xdf in gen:
-            for row in xdf:
-                data.append(row)
+            data.append(xdf)
         if not data:
             raise StopIteration
         label = self.file_label_dict[self.current_file]
@@ -167,16 +168,12 @@ class MetaDataGenerator(object):
             self.current_file = self.files[idx]
         current_file = self.current_file
         reader = self.reader[current_file]
+        for data in reader.next(verbose=verbose):
+            yield data
         if stop == -1:
-            for _ in range(reader.nrows):
-                data = reader.next(verbose=verbose)
-                yield data
             read_evts = reader.nrows
         else:
-            for _ in range(start, stop):
-                xdf = reader.next(verbose=verbose)
-                yield xdf
-                read_evts = stop-start
+            read_evts = stop-start
         # update how many events we read from current file
         self.reader_counter[self.current_file] += read_evts
         if self.verbose:
@@ -186,7 +183,7 @@ class MetaDataGenerator(object):
 
 class RootDataGenerator(object):
     """
-    DataGenerator class provides interface to read HEP ROOT files.
+    RootDataGenerator class provides interface to read HEP ROOT files.
     """
     def __init__(self, fin, labels, params=None, specs=None):
         "Initialization function for Data Generator"
@@ -285,7 +282,7 @@ class RootDataGenerator(object):
     def next(self):
         "Return next batch of events in form of data and mask vectors"
         msg = "\nread chunk [{}:{}] from {} label {}".format(self.start_idx, self.stop_idx, self.current_file, self.file_label_dict[self.current_file])
-        gen = self.read_data(self.start_idx, self.stop_idx)
+        gen = self.read_data(self.start_idx, self.stop_idx, verbose=self.verbose)
         # advance start and stop indecies
         self.start_idx = self.stop_idx
         self.stop_idx = self.start_idx+self.chunk_size
