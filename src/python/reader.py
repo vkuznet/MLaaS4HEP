@@ -228,13 +228,13 @@ class HDFSJSONReader(object):
     """
     HDFSJSONReader represents interface to read JSON file from HDFS.
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[]):
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None):
         self.raw = None
         self.fin = fin
         self.keys = None
         self.chunk_size = chunk_size
         self.nrows = nevts
-        self.drop = drop
+        self.preproc = preproc
         self.pos = 0
 
     def read(self, fin):
@@ -277,8 +277,10 @@ class HDFSJSONReader(object):
             rec = json.loads(line.decode('utf-8'))
             if not rec:
                 continue
+            if self.preproc:
+                rec = self.preproc(rec)
             if not self.keys:
-                self.keys = [k for k in sorted(rec.keys()) if k not in self.drop]
+                self.keys = [k for k in sorted(rec.keys())]
             if self.keys != sorted(rec.keys()):
                 rkeys = sorted(rec.keys())
                 msg = 'WARNING: record %s contains different set of keys from original ones\n' % idx
@@ -300,7 +302,7 @@ class JSONReader(object):
     """
     JSONReader represents interface to read JSON file.
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[]): 
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None):
         if hasattr(fin, 'readline'): # we already given a file descriptor
             self.istream = fin
         else:
@@ -308,7 +310,7 @@ class JSONReader(object):
         self.keys = None
         self.chunk_size = chunk_size
         self.nrows = nevts
-        self.drop = drop
+        self.preproc = preproc
 
     def __exit__(self):
         "Exit function for our class"
@@ -329,8 +331,10 @@ class JSONReader(object):
             rec = json.loads(line)
             if not rec:
                 continue
+            if self.preproc:
+                rec = self.preproc(rec)
             if not self.keys:
-                self.keys = [k for k in sorted(rec.keys()) if k not in self.drop]
+                self.keys = [k for k in sorted(rec.keys())]
             if self.keys != sorted(rec.keys()):
                 rkeys = sorted(rec.keys())
                 msg = 'WARNING: record %s contains different set of keys from original ones\n' % idx
@@ -347,11 +351,79 @@ class JSONReader(object):
             data = [rec.get(k, 0) for k in self.keys]
             yield np.array(data)
 
+class HDFSCSVReader(object):
+    """
+    HDFSCSVReader represents interface to read CSV file from HDFS storage
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, headers=None, separator=','):
+        self.fin = fin
+        self.raw = None
+        self.headers = headers
+        self.keys = headers if headers else None
+        self.sep = sep
+        self.chunk_size = chunk_size
+        self.nrows = nevts
+        self.preproc = preproc
+
+    def read(self, fin):
+        "Read data from the fiven file into numpy array"
+        if pyarrow:
+            client=pyarrow.hdfs.connect()
+            with client.open(fin) as istream:
+                raw = istream.read()
+                if fin.endswith('gz'):
+                    raw = gzip.decompress(raw)
+                return raw
+        else:
+            raise Exception("pyarrow is not available")
+
+    def __exit__(self):
+        "Exit function for our class"
+        if hasattr(self.istream, 'close'):
+            self.istream.close()
+
+    @property
+    def columns(self):
+        "Return names of columns of our data"
+        return self.keys
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        if not self.raw:
+            if verbose:
+                print("%s reading %s" % (self.__class__.__name__, self.fin))
+            time0 = time.time()
+            self.raw = self.read(self.fin)
+            if verbose:
+                print("read %s in %s sec" % (self.fin, time.time()-time0))
+        lines = self.raw.splitlines()
+        for idx in range(self.chunk_size):
+            if len(lines) <= self.pos:
+                break
+            line = lines[self.pos+idx]
+            if not line:
+                continue
+            row = line.split(self.sep)
+            if not row:
+                continue
+            if self.preproc:
+                row = self.preproc(row)
+            if not self.keys:
+                self.keys = [k for k in sorted(row)]
+                continue
+            rec = dict(zip(self.keys, row))
+            if self.keys != sorted(rec.keys()):
+                msg = 'WARNING: record %s contains different set of keys from original ones' % idx
+                if verbose:
+                    print(msg)
+            data = [rec.get(k, 0) for k in self.keys]
+            yield np.array(data)
+
 class CSVReader(object):
     """
     CSVReader represents interface to read CSV file.
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[], headers=None, separator=','): 
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, headers=None, separator=','):
         if hasattr(fin, 'readline'): # we already given a file descriptor
             self.istream = fin
         else:
@@ -361,7 +433,7 @@ class CSVReader(object):
         self.sep = sep
         self.chunk_size = chunk_size
         self.nrows = nevts
-        self.drop = drop
+        self.preproc = preproc
 
     def __exit__(self):
         "Exit function for our class"
@@ -382,8 +454,10 @@ class CSVReader(object):
             row = line.split(self.sep)
             if not rec:
                 continue
+            if self.preproc:
+                row = self.preproc(row)
             if not self.keys:
-                self.keys = [k for k in sorted(row) if k not in self.drop]
+                self.keys = [k for k in sorted(row)]
                 continue
             rec = dict(zip(self.keys, row))
             if self.keys != sorted(rec.keys()):
@@ -397,7 +471,7 @@ class AvroReader(object):
     """
     AvroReader represents interface to read Avro file.
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[]): 
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None):
         if hasattr(fin, 'readline'): # we already given a file descriptor
             self.istream = fin
         else:
@@ -405,7 +479,7 @@ class AvroReader(object):
         self.keys = None
         self.chunk_size = chunk_size
         self.nrows = nevts
-        self.drop = drop
+        self.preproc = preproc
 
     def __exit__(self):
         "Exit function for our class"
