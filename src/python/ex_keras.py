@@ -1,3 +1,6 @@
+"""
+Basic example of ML model implemented via Keras framework
+"""
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 
