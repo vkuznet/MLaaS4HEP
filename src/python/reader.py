@@ -269,7 +269,7 @@ class HDFSJSONReader(object):
                 print("read %s in %s sec" % (self.fin, time.time()-time0))
         lines = self.raw.splitlines()
         for idx in range(self.chunk_size):
-            if len(lines) <= self.pos + idx:
+            if len(lines) <= self.pos:
                 break
             line = lines[self.pos+idx]
             if not line:
@@ -293,6 +293,7 @@ class HDFSJSONReader(object):
                 if verbose:
                     print(msg)
             data = [rec.get(k, 0) for k in self.keys]
+            self.pos += 1
             yield np.array(data)
 
 class JSONReader(object):
