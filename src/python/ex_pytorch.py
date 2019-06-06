@@ -1,3 +1,6 @@
+"""
+Basic example of ML model implemented via pytorch framework
+"""
 from jarray.pytorch import JaggedArrayLinear
 import torch
 
