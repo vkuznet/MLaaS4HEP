@@ -87,6 +87,7 @@ except ImportError:
 try:
     import pyarrow
 except:
+    traceback.print_exc()
     pyarrow = None
 
 class OptionParser():
@@ -269,9 +270,10 @@ class HDFSJSONReader(object):
                 print("read %s in %s sec" % (self.fin, time.time()-time0))
         lines = self.raw.splitlines()
         for idx in range(self.chunk_size):
+            time0 = time.time()
             if len(lines) <= self.pos:
                 break
-            line = lines[self.pos+idx]
+            line = lines[self.pos]
             if not line:
                 continue
             rec = json.loads(line.decode('utf-8'))
@@ -292,11 +294,14 @@ class HDFSJSONReader(object):
                 else:
                     diff = set(rkeys)-set(self.keys)
                     msg += 'rkeys-orig diff: %s\n' % diff
-                if verbose:
+                if verbose > 1:
                     print(msg)
             data = [rec.get(k, 0) for k in self.keys]
             self.pos += 1
-            yield np.array(data)
+            data = np.array(data)
+            if verbose > 1:
+                print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
+            yield data
 
 class JSONReader(object):
     """
