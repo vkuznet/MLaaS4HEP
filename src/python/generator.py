@@ -17,7 +17,7 @@ import random
 import numpy as np
 
 # MLaaS4HEP modules
-from reader import RootDataReader, JSONReader, CSVReader, AvroReader
+from reader import RootDataReader, JSONReader, CSVReader, AvroReader, HDFSJSONReader
 
 def timestamp(msg='MLaaS4HEP'):
     "Return timestamp in pre-defined format"
@@ -29,6 +29,9 @@ def file_type(fin):
     "Return file type of given object"
     if isinstance(fin, list):
         fin = fin[0]
+    fin = fin.lower()
+    if fin.startswith('hdfs://'):
+        return 'hdfs-'+file_type(fin.replace('hdfs://', ''))
     for ext in ['root', 'avro']:
         if fin.endswith(ext):
             return ext
@@ -84,6 +87,8 @@ class MetaDataGenerator(object):
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
+            if self.mtype == 'hdfs-json' or file_type(fname) == 'hdfs-json':
+                reader = HDFSJSONReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
             if self.mtype == 'json' or file_type(fname) == 'json':
                 reader = JSONReader(fname, chunk_size=chunk_size, nevts=self.evts, drop=self.drop)
             elif self.mtype == 'csv' or file_type(fname) == 'csv':
