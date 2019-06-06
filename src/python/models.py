@@ -82,30 +82,33 @@ class Trainer(object):
         else:
             raise NotImplemented
 
-def load_model(mfile):
+def load_code(mfile, fname):
     """
-    Load model from given pyton module (file)
+    Load function from given python module (file)
 
-    :param mfile: the python module name which implements model function
+    :param mfile: the python module/file name which provides fname
+    :param fname: name of the function from mfile
     """
     mname = mfile.split('.py')[0].replace('/', '.')
     try:
         mod = __import__(mname, fromlist=['model'])
-        print("loaded {} {} {}".format(mfile, mod.model, mod.model.__doc__))
-        return mod.model
+        func = getattr(mod, fname)
+        print("load {} {} {}".format(mfile, func, func.__doc__))
+        return func
     except ImportError:
         traceback.print_exc()
-        msg = "Please provide python module which implements model function.\n"
-        msg += "The input file name should be visible through PYTHONPATH"
+        msg = "Please provide file name with 'def %s' implementation" % fname
+        msg += "\nThe file should be available in PYTHONPATH"
         print(msg)
         raise
 
-def train_model(model, files, labels, params=None, specs=None, fout=None):
+def train_model(model, files, labels, preproc=None, params=None, specs=None, fout=None, dtype=None):
     """
     Train given model on set of files, params, specs
 
     :param model: the model class
     :param files: the list of files to use for training
+    :param preproc: file name which contains preprocessing function
     :param params: list of parameters to use for training (via input json file)
     :param specs: file specs
     :param fout: output file name to save the trained model
@@ -114,11 +117,13 @@ def train_model(model, files, labels, params=None, specs=None, fout=None):
         params = {}
     if not specs:
         specs = {}
-    model = load_model(model)
+    model = load_code(model, 'model')
+    if preproc:
+        preproc = load_code(preproc, 'preprocessing')
     if file_type(files) == 'root':
         gen = RootDataGenerator(files, labels, params, specs)
     else:
-        gen = MetaDataGenerator(files, labels, params, specs)
+        gen = MetaDataGenerator(files, labels, params, specs, preproc, dtype)
     epochs = specs.get('epochs', 10)
     batch_size = specs.get('batch_size', 50)
     shuffle = specs.get('shuffle', True)
