@@ -81,11 +81,13 @@ try:
 except ImportError:
     hg = None
 
-# try spark context
+# pyarrow module for accessing HDFS
+# https://wesmckinney.com/blog/python-hdfs-interfaces/
+# https://arrow.apache.org
 try:
-    sc = spark.sparkContext
+    import pyarrow
 except:
-    spark = None
+    pyarrow = None
 
 class OptionParser():
     def __init__(self):
@@ -227,19 +229,25 @@ class HDFSJSONReader(object):
     HDFSJSONReader represents interface to read JSON file from HDFS.
     """
     def __init__(self, fin, chunk_size=1000, nevts=-1, drop=[]):
-        if spark:
-            xdf = spark.read.json(fin)
-            print(xdf.printSchema())
-            # this will work on small-ish files, we need to figure out
-            # how to properly read chunk of data from Spark DataFrame
-            self.xdf = xdf.toPandas()
-        else:
-            raise Exception("Spark is not available")
-        self.keys = xdf.columns
+        self.raw = None
+        self.fin = fin
+        self.keys = None
         self.chunk_size = chunk_size
         self.nrows = nevts
         self.drop = drop
         self.pos = 0
+
+    def read(self, fin):
+        "Read data from the fiven file into numpy array"
+        if pyarrow:
+            client=pyarrow.hdfs.connect()
+            with client.open(fin) as istream:
+                raw = istream.read()
+                if fin.endswith('gz'):
+                    raw = gzip.decompress(raw)
+                return raw
+        else:
+            raise Exception("pyarrow is not available")
 
     def __exit__(self):
         "Exit function for our class"
@@ -252,8 +260,40 @@ class HDFSJSONReader(object):
 
     def next(self, verbose=0):
         "Read next chunk of data from out file"
-        # TODO: find out which indexes to use
-        yield self.xdf.values
+        if not self.raw:
+            if verbose:
+                print("%s reading %s" % (self.__class__.__name__, self.fin))
+            time0 = time.time()
+            self.raw = self.read(self.fin)
+            if verbose:
+                print("read %s in %s sec" % (self.fin, time.time()-time0))
+        lines = self.raw.splitlines()
+        for idx in range(self.chunk_size):
+            if len(lines) <= self.pos + idx:
+                break
+            line = lines[self.pos+idx]
+            if not line:
+                continue
+            rec = json.loads(line.decode('utf-8'))
+            if not rec:
+                continue
+            if not self.keys:
+                self.keys = [k for k in sorted(rec.keys()) if k not in self.drop]
+            if self.keys != sorted(rec.keys()):
+                rkeys = sorted(rec.keys())
+                msg = 'WARNING: record %s contains different set of keys from original ones\n' % idx
+                msg += 'original keys : %s\n' % json.dumps(self.keys)
+                msg += 'record   keys : %s\n' % json.dumps(rkeys)
+                if len(self.keys) > len(rkeys):
+                    diff = set(self.keys)-set(rkeys)
+                    msg += 'orig-rkeys diff: %s\n' % diff
+                else:
+                    diff = set(rkeys)-set(self.keys)
+                    msg += 'rkeys-orig diff: %s\n' % diff
+                if verbose:
+                    print(msg)
+            data = [rec.get(k, 0) for k in self.keys]
+            yield np.array(data)
 
 class JSONReader(object):
     """
