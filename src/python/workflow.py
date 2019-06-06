@@ -70,7 +70,9 @@ def main():
         labels = opts.labels.split(',')
 
     if opts.model:
-        train_model(opts.model, files, labels, opts.preproc, params, specs, opts.fout, opts.dtype)
+        train_model(opts.model, files, labels,
+                preproc=opts.preproc, params=params, specs=specs,
+                fout=opts.fout, dtype=opts.dtype)
         return
 
 if __name__ == '__main__':
