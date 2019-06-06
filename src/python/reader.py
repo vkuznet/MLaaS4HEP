@@ -403,9 +403,10 @@ class HDFSCSVReader(object):
                 print("read %s in %s sec" % (self.fin, time.time()-time0))
         lines = self.raw.splitlines()
         for idx in range(self.chunk_size):
+            time0 = time.time()
             if len(lines) <= self.pos:
                 break
-            line = lines[self.pos+idx]
+            line = lines[self.pos]
             if not line:
                 continue
             row = line.split(self.sep)
@@ -422,7 +423,11 @@ class HDFSCSVReader(object):
                 if verbose:
                     print(msg)
             data = [rec.get(k, 0) for k in self.keys]
-            yield np.array(data)
+            self.pos += 1
+            data = np.array(data)
+            if verbose > 1:
+                print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
+            yield data
 
 class CSVReader(object):
     """
