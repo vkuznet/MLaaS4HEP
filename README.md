@@ -45,9 +45,6 @@ conda install -c pytorch pytorch
 conda install keras numpy pandas
 ```
 
-Finally, the TFaaS server is written in Go language and for that you'll need
-to install it on your system or use tfaas docker image.
-
 ### Reading ROOT files
 MLaaS4HEP python repository provides two base modules to read and manipulate with
 HEP ROOT files. The `reader.py` module defines a DataReader class which is
@@ -165,10 +162,19 @@ in `train` folder along with `labels.csv` file which provides labels.
 The model runs for 200 epochs and save Keras/TF model into `models` output
 directory.
 
+### TFaaS inference server
+We provide inference server in separate
+[TFaaS](https://github.com/vkuznet/tfaas)
+repository. It contains full set of instructions how to build and set it up.
+
 ### TFaaS client
-We provide pure python
+To access your ML model in TFaaS inference server you only need to rely
+on HTTP protocol. Please see [TFaaS](https://github.com/vkuznet/tfaas)
+repository for more information.
+
+But for convenience we also provide pure python
 [client](https://github.com/vkuznet/TFaaS/blob/master/src/python/tfaas_client.py)
-to perform all necessary action against TFaaS server. Here is short
+to perform all necessary actions against TFaaS server. Here is short
 description of available APIs:
 
 ```
