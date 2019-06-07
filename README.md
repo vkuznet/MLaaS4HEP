@@ -15,7 +15,7 @@ stream them to ML of user choice for training. It consists of three independent 
   see [tfaas_client.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/tfaas_client.py)
 
 The general architecture of MLaaS4HEP looks like this:
-![MLaaS4HEP-architecture](https://github.com/vkuznet/MLaaS4HEP/blob/master/images/MLaaS4HEP-arch.png)
+![MLaaS4HEP-architecture](https://github.com/vkuznet/MLaaS4HEP/blob/master/images/MLaaS4HEP_arch_gen.png)
 Even though this architecture was originally developed for dealing with
 HEP ROOT files we extend it to other data formats. So far the following
 data formats are supported: JSON, CSV, Parquet, ROOT. The former ones support
