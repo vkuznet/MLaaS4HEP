@@ -17,7 +17,7 @@ import random
 import numpy as np
 
 # MLaaS4HEP modules
-from reader import RootDataReader, JSONReader, CSVReader, AvroReader, HDFSJSONReader
+from reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
 
 def timestamp(msg='MLaaS4HEP'):
     "Return timestamp in pre-defined format"
@@ -30,8 +30,6 @@ def file_type(fin):
     if isinstance(fin, list):
         fin = fin[0]
     fin = fin.lower()
-    if fin.startswith('hdfs://'):
-        return 'hdfs-'+file_type(fin.replace('hdfs://', ''))
     for ext in ['root', 'avro']:
         if fin.endswith(ext):
             return ext
@@ -86,14 +84,18 @@ class MetaDataGenerator(object):
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
-            if self.dtype == 'hdfs-json' or file_type(fname) == 'hdfs-json':
-                reader = HDFSJSONReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
             if self.dtype == 'json' or file_type(fname) == 'json':
-                reader = JSONReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
+                reader = JsonReader(fname, chunk_size=chunk_size, nevts=self.evts,
+                        preproc=self.preproc, verbose=self.verbose)
             elif self.dtype == 'csv' or file_type(fname) == 'csv':
-                reader = CSVReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
+                reader = CsvReader(fname, chunk_size=chunk_size, nevts=self.evts,
+                        preproc=self.preproc, verbose=self.verbose)
             elif self.dtype == 'avro' or file_type(fname) == 'avro':
-                reader = AvroReader(fname, chunk_size=chunk_size, nevts=self.evts, preproc=self.preproc)
+                reader = AvroReader(fname, chunk_size=chunk_size, nevts=self.evts,
+                        preproc=self.preproc, verbose=self.verbose)
+            elif self.dtype == 'parquet' or file_type(fname) == 'parquet':
+                reader = ParquetReader(fname, chunk_size=chunk_size, nevts=self.evts,
+                        preproc=self.preproc, verbose=self.verbose)
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
 
@@ -168,7 +170,7 @@ class MetaDataGenerator(object):
             self.current_file = self.files[idx]
         current_file = self.current_file
         reader = self.reader[current_file]
-        for data in reader.next(verbose=verbose):
+        for data in reader.next():
             yield data
         if stop == -1:
             read_evts = reader.nrows
@@ -332,12 +334,12 @@ class RootDataGenerator(object):
         reader = self.reader[current_file]
         if stop == -1:
             for _ in range(reader.nrows):
-                xdf, mask = reader.next(verbose=verbose)
+                xdf, mask = reader.next()
                 yield (xdf, mask)
             read_evts = reader.nrows
         else:
             for _ in range(start, stop):
-                xdf, mask = reader.next(verbose=verbose)
+                xdf, mask = reader.next()
                 yield (xdf, mask)
                 read_evts = stop-start
         # update how many events we read from current file
