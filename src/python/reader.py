@@ -225,9 +225,13 @@ def fopen(fin, mode='r'):
         stream = open(fin, mode)
     return stream
 
-class HDFSJSONReader(object):
+#
+# HDFS readers
+#
+
+class HDFSReader(object):
     """
-    HDFSJSONReader represents interface to read JSON file from HDFS.
+    HDFSReader represents interface to read data file from HDFS.
     """
     def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None):
         self.raw = None
@@ -259,7 +263,7 @@ class HDFSJSONReader(object):
         "Return names of columns of our data"
         return self.keys
 
-    def next(self, verbose=0):
+    def getdata(self, verbose=0):
         "Read next chunk of data from out file"
         if not self.raw:
             if verbose:
@@ -268,7 +272,21 @@ class HDFSJSONReader(object):
             self.raw = self.read(self.fin)
             if verbose:
                 print("read %s in %s sec" % (self.fin, time.time()-time0))
-        lines = self.raw.splitlines()
+        return self.raw
+
+class HDFSJSONReader(HDFSReader):
+    """
+    HDFSJSONReader represents interface to read JSON file from HDFS.
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None):
+        if  sys.version.startswith('3.'):
+            super().__init__(fin, chunk_size, nevts, preproc)
+        else:
+            super(HDFSReader, self).__init__(fin, chunk_size, nevts, preproc)
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        lines = self.getdata().splitlines()
         for idx in range(self.chunk_size):
             time0 = time.time()
             if len(lines) <= self.pos:
@@ -302,6 +320,70 @@ class HDFSJSONReader(object):
             if verbose > 1:
                 print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
             yield data
+
+class HDFSCSVReader(HDFSReader):
+    """
+    HDFSCSVReader represents interface to read CSV file from HDFS storage
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, headers=None, separator=','):
+        if  sys.version.startswith('3.'):
+            super().__init__(fin, chunk_size, nevts, preproc)
+        else:
+            super(HDFSReader, self).__init__(fin, chunk_size, nevts, preproc)
+        self.headers = headers
+        self.sep = separator
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        lines = self.getdata().splitlines()
+        for idx in range(self.chunk_size):
+            time0 = time.time()
+            if len(lines) <= self.pos:
+                break
+            line = lines[self.pos]
+            if not line:
+                continue
+            row = line.split(self.sep)
+            if not row:
+                continue
+            if self.preproc:
+                row = self.preproc(row)
+            if not self.keys:
+                self.keys = [k for k in sorted(row)]
+                continue
+            rec = dict(zip(self.keys, row))
+            if self.keys != sorted(rec.keys()):
+                msg = 'WARNING: record %s contains different set of keys from original ones' % idx
+                if verbose:
+                    print(msg)
+            data = [rec.get(k, 0) for k in self.keys]
+            self.pos += 1
+            data = np.array(data)
+            if verbose > 1:
+                print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
+            yield data
+
+class HDFSParquetReader(HDFSReader):
+    """
+    HDFSParquetReader represents interface to read Parque file from HDFS storage
+    """
+    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None):
+        if  sys.version.startswith('3.'):
+            super().__init__(fin, chunk_size, nevts, preproc)
+        else:
+            super(HDFSReader, self).__init__(fin, chunk_size, nevts, preproc)
+        self.headers = headers
+        self.sep = separator
+
+    def next(self, verbose=0):
+        "Read next chunk of data from out file"
+        data = pyarrow.parquet.read_table(self.fin)
+        xdf = data.to_pandas()
+        yield xdf.values
+
+#
+# Data reader classes
+#
 
 class JSONReader(object):
     """
@@ -356,79 +438,6 @@ class JSONReader(object):
             data = [rec.get(k, 0) for k in self.keys]
             yield np.array(data)
 
-class HDFSCSVReader(object):
-    """
-    HDFSCSVReader represents interface to read CSV file from HDFS storage
-    """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, headers=None, separator=','):
-        self.fin = fin
-        self.raw = None
-        self.headers = headers
-        self.keys = headers if headers else None
-        self.sep = sep
-        self.chunk_size = chunk_size
-        self.nrows = nevts
-        self.preproc = preproc
-
-    def read(self, fin):
-        "Read data from the fiven file into numpy array"
-        if pyarrow:
-            client=pyarrow.hdfs.connect()
-            with client.open(fin) as istream:
-                raw = istream.read()
-                if fin.endswith('gz'):
-                    raw = gzip.decompress(raw)
-                return raw
-        else:
-            raise Exception("pyarrow is not available")
-
-    def __exit__(self):
-        "Exit function for our class"
-        if hasattr(self.istream, 'close'):
-            self.istream.close()
-
-    @property
-    def columns(self):
-        "Return names of columns of our data"
-        return self.keys
-
-    def next(self, verbose=0):
-        "Read next chunk of data from out file"
-        if not self.raw:
-            if verbose:
-                print("%s reading %s" % (self.__class__.__name__, self.fin))
-            time0 = time.time()
-            self.raw = self.read(self.fin)
-            if verbose:
-                print("read %s in %s sec" % (self.fin, time.time()-time0))
-        lines = self.raw.splitlines()
-        for idx in range(self.chunk_size):
-            time0 = time.time()
-            if len(lines) <= self.pos:
-                break
-            line = lines[self.pos]
-            if not line:
-                continue
-            row = line.split(self.sep)
-            if not row:
-                continue
-            if self.preproc:
-                row = self.preproc(row)
-            if not self.keys:
-                self.keys = [k for k in sorted(row)]
-                continue
-            rec = dict(zip(self.keys, row))
-            if self.keys != sorted(rec.keys()):
-                msg = 'WARNING: record %s contains different set of keys from original ones' % idx
-                if verbose:
-                    print(msg)
-            data = [rec.get(k, 0) for k in self.keys]
-            self.pos += 1
-            data = np.array(data)
-            if verbose > 1:
-                print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
-            yield data
-
 class CSVReader(object):
     """
     CSVReader represents interface to read CSV file.
@@ -480,6 +489,7 @@ class CSVReader(object):
 class AvroReader(object):
     """
     AvroReader represents interface to read Avro file.
+    Depends on: https://issues.apache.org/jira/browse/ARROW-1209
     """
     def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None):
         if hasattr(fin, 'readline'): # we already given a file descriptor
