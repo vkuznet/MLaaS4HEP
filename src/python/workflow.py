@@ -62,12 +62,14 @@ def main():
     else:
         files = opts.files.split(',')
     if not opts.labels:
-        print('No labels is provided')
+        print('Please provide either label file or label name to look-up in data')
         sys.exit(1)
     if os.path.isfile(opts.labels):
         labels = [f.replace('\n', '') for f in open(opts.labels).readlines() if not f.startswith('#')]
-    else:
+    elif opts.labels.find(',') != -1: # label list
         labels = opts.labels.split(',')
+    else:
+        labels = opts.labels # label name to look-up in data
 
     if opts.model:
         train_model(opts.model, files, labels,
