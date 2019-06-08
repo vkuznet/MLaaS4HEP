@@ -87,7 +87,6 @@ try:
     import pyarrow
     import pyarrow.parquet as pq
 except:
-    traceback.print_exc()
     pyarrow = None
 
 class OptionParser():
@@ -229,8 +228,9 @@ class FileReader(object):
     """
     FileReader represents generic interface to read data files
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0, reader=None):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0, reader=None):
         self.fin = fin
+        self.label = label
         self.chunk_size = chunk_size
         self.nevts = nevts
         self.preproc = preproc
@@ -277,11 +277,11 @@ class HDFSReader(FileReader):
     """
     HDFSReader represents interface to read data file from HDFS.
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(HDFSReader, self).__init__(fin, chunk_size, nevts, preproc, verbose)
+            super(HDFSReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
         self.raw = None
         self.keys = None
         self.pos = 0
@@ -313,11 +313,11 @@ class HDFSJSONReader(HDFSReader):
     """
     HDFSJSONReader represents interface to read JSON file from HDFS.
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(HDFSReader, self).__init__(fin, chunk_size, nevts, preproc, verbose)
+            super(HDFSJSONReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
 
     def next(self):
         "Read next chunk of data from out file"
@@ -349,22 +349,27 @@ class HDFSJSONReader(HDFSReader):
                     msg += 'rkeys-orig diff: %s\n' % diff
                 if self.verbose > 1:
                     print(msg)
-            data = [rec.get(k, 0) for k in self.keys]
+            if self.label in self.keys:
+                data = [rec.get(k, 0) for k in self.keys if k != self.label]
+                label = rec[self.label]
+            else:
+                data = [rec.get(k, 0) for k in self.keys]
+                label = self.label
             self.pos += 1
             data = np.array(data)
             if self.verbose > 1:
                 print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
-            yield data
+            yield data, label
 
 class HDFSCSVReader(HDFSReader):
     """
     HDFSCSVReader represents interface to read CSV file from HDFS storage
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0, headers=None, separator=','):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0, headers=None, separator=','):
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(HDFSReader, self).__init__(fin, chunk_size, nevts, preproc, verbose)
+            super(HDFSCSVReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
         self.headers = headers
         self.sep = separator
 
@@ -391,29 +396,39 @@ class HDFSCSVReader(HDFSReader):
                 msg = 'WARNING: record %s contains different set of keys from original ones' % idx
                 if self.verbose:
                     print(msg)
-            data = [rec.get(k, 0) for k in self.keys]
+            if self.label in self.keys:
+                data = [rec.get(k, 0) for k in self.keys if k != self.label]
+                label = rec[self.label]
+            else:
+                data = [rec.get(k, 0) for k in self.keys]
+                label = self.label
             self.pos += 1
             data = np.array(data)
             if self.verbose > 1:
                 print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
-            yield data
+            yield data, label
 
 class ParquetReader(HDFSReader):
     """
     ParquetReader represents interface to read Parque files
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(HDFSReader, self).__init__(fin, chunk_size, nevts, preproc, verbose)
+            super(ParquetReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
 
     def next(self):
         "Read next chunk of data from out file"
         data = pq.read_table(self.fin)
         xdf = data.to_pandas()
         self.keys = list(xdf.columns)
-        yield xdf.values
+        if self.label in self.keys:
+            label = xdf[self.label]
+            xdf.drop(self.label, axis=1)
+            yield xdf.values, label
+        else:
+            yield xdf.values, self.label
 
 #
 # Data reader classes
@@ -423,11 +438,11 @@ class JSONReader(FileReader):
     """
     JSONReader represents interface to read JSON file from local file system
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(FileReader, self).__init__(fin, chunk_size, nevts, preproc, verbose)
+            super(JSONReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
 
     def next(self):
         "Read next chunk of data from out file"
@@ -455,18 +470,23 @@ class JSONReader(FileReader):
                     msg += 'rkeys-orig diff: %s\n' % diff
                 if self.verbose:
                     print(msg)
-            data = [rec.get(k, 0) for k in self.keys]
-            yield np.array(data)
+            if self.label in self.keys:
+                data = [rec.get(k, 0) for k in self.keys if k != self.label]
+                label = rec[self.label]
+            else:
+                data = [rec.get(k, 0) for k in self.keys]
+                label = self.label
+            yield np.array(data), label
 
 class CSVReader(FileReader):
     """
     CSVReader represents interface to read CSV file from local file system
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0, headers=None, separator=','):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0, headers=None, separator=','):
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(FileReader, self).__init__(fin, chunk_size, nevts, preproc, verbose)
+            super(CSVReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
         self.headers = headers
         self.keys = headers if headers else None
         self.sep = sep
@@ -490,7 +510,12 @@ class CSVReader(FileReader):
                 msg = 'WARNING: record %s contains different set of keys from original ones' % idx
                 if self.verbose:
                     print(msg)
-            data = [rec.get(k, 0) for k in self.keys]
+            if self.label in self.keys:
+                data = [rec.get(k, 0) for k in self.keys if k != self.label]
+                label = rec[self.label]
+            else:
+                data = [rec.get(k, 0) for k in self.keys]
+                label = self.label
             yield np.array(data)
 
 class AvroReader(FileReader):
@@ -498,11 +523,11 @@ class AvroReader(FileReader):
     AvroReader represents interface to read Avro file.
     Depends on: https://issues.apache.org/jira/browse/ARROW-1209
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(FileReader, self).__init__(fin, chunk_size, nevts, preproc, verbose)
+            super(AvroReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
 
     def next(self):
         "Read next chunk of data from out file"
@@ -515,30 +540,30 @@ class JsonReader(FileReader):
     """
     JsonReader represents interface to read jSON file either from local file system or HDFS
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
         if  fin.lower().startswith('hdfs://'):
-            reader = HDFSJSONReader(fin, chunk_size, nevts, preproc)
+            reader = HDFSJSONReader(fin, label, chunk_size, nevts, preproc)
         else:
-            reader = JSONReader(fin, chunk_size, nevts, preproc)
+            reader = JSONReader(fin, label, chunk_size, nevts, preproc)
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose, reader)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
         else:
-            super(FileReader, self).__init__(fin, chunk_size, nevts, preproc, verbose, reader)
+            super(JsonReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
 
 
 class CsvReader(FileReader):
     """
     CsvReader represents interface to read CSV file either from local file system or HDFS
     """
-    def __init__(self, fin, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0):
         if  fin.lower().startswith('hdfs://'):
-            reader = HDFSCSVReader(fin, chunk_size, nevts, preproc)
+            reader = HDFSCSVReader(fin, label, chunk_size, nevts, preproc)
         else:
-            reader = PlainCSVReader(fin, chunk_size, nevts, preproc)
+            reader = PlainCSVReader(fin, label, chunk_size, nevts, preproc)
         if  sys.version.startswith('3.'):
-            super().__init__(fin, chunk_size, nevts, preproc, verbose, reader)
+            super().__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
         else:
-            super(FileReader, self).__init__(fin, chunk_size, nevts, preproc, verbose, reader)
+            super(CsvReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
 
 
 class RootDataReader(object):
