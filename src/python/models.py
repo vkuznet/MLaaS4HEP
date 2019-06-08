@@ -48,7 +48,7 @@ class Trainer(object):
             except AttributeError:
                 print(self.model)
 
-    def fit(self, data, y_train, **kwds):
+    def fit(self, x_train, y_train, **kwds):
         """
         Fit API of the trainer.
 
@@ -56,16 +56,13 @@ class Trainer(object):
         :param y_train: the true values vector for input data.
         :param kwds: defines input set of parameters for end-user model.
         """
-        xdf, mask = data[0], data[1]
-        # cast values in data vector according to the mask
-        xdf[np.isnan(mask)] = 0
         if self.verbose:
             print("Perform fit on {} data with {}"\
-                    .format(np.shape(xdf), kwds))
+                    .format(np.shape(x_train), kwds))
         if self.cls_model.find('keras') != -1:
-            self.model.fit(xdf, y_train, verbose=self.verbose, **kwds)
+            self.model.fit(x_train, y_train, verbose=self.verbose, **kwds)
         elif self.cls_model.find('torch') != -1:
-            yhat = self.model(xdf).data.numpy()
+            yhat = self.model(x_train).data.numpy()
         else:
             raise NotImplemented
 
@@ -108,6 +105,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
 
     :param model: the model class
     :param files: the list of files to use for training
+    :param labels: the list of label files to use for training or label name to use in data
     :param preproc: file name which contains preprocessing function
     :param params: list of parameters to use for training (via input json file)
     :param specs: file specs
@@ -137,6 +135,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         elif len(data) == 3: # ROOT data with mask array
             x_train = data[0]
             x_mask = data[1]
+            x_train[np.isnan(x_train)] = 0 # convert all nan's to zero
             y_train = data[2]
             print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         print("x_train chunk of {} shape".format(np.shape(x_train)))
@@ -151,6 +150,6 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             idim = np.shape(x_train)[-1] # read number of attributes we have
             trainer = Trainer(model(idim), verbose=params.get('verbose', 0))
 
-        trainer.fit(data, y_train, **kwds)
+        trainer.fit(x_train, y_train, **kwds)
     if fout and hasattr(trainer, 'save'):
         trainer.save(fout)
