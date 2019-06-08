@@ -63,7 +63,7 @@ class MetaDataGenerator(object):
         else:
             raise Exception("Unsupported data-type '%s' for fin parameter" % type(fin))
         if isinstance(labels, str):
-            self.labels = [labels]
+            self.labels = [labels for _ in range(len(self.files))]
         elif isinstance(labels, list):
             self.labels = labels
         else:
@@ -83,18 +83,18 @@ class MetaDataGenerator(object):
         self.batch_size = batch_size
 
         # loop over files and create individual readers for them, then put them in a global reader
-        for fname in self.files:
+        for fname, label in self.file_label_dict.items():
             if self.dtype == 'json' or file_type(fname) == 'json':
-                reader = JsonReader(fname, chunk_size=chunk_size, nevts=self.evts,
+                reader = JsonReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
                         preproc=self.preproc, verbose=self.verbose)
-            elif self.dtype == 'csv' or file_type(fname) == 'csv':
-                reader = CsvReader(fname, chunk_size=chunk_size, nevts=self.evts,
+            elif self.dtype == 'csv' or file_type(fname, label) == 'csv':
+                reader = CsvReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
                         preproc=self.preproc, verbose=self.verbose)
-            elif self.dtype == 'avro' or file_type(fname) == 'avro':
-                reader = AvroReader(fname, chunk_size=chunk_size, nevts=self.evts,
+            elif self.dtype == 'avro' or file_type(fname, label) == 'avro':
+                reader = AvroReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
                         preproc=self.preproc, verbose=self.verbose)
-            elif self.dtype == 'parquet' or file_type(fname) == 'parquet':
-                reader = ParquetReader(fname, chunk_size=chunk_size, nevts=self.evts,
+            elif self.dtype == 'parquet' or file_type(fname, label) == 'parquet':
+                reader = ParquetReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
                         preproc=self.preproc, verbose=self.verbose)
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
@@ -131,13 +131,17 @@ class MetaDataGenerator(object):
         if self.verbose:
             print(msg)
         data = []
-        for xdf in gen:
+        labels = []
+        for xdf, ldf in gen:
             data.append(xdf)
+            labels.append(ldf)
         if not data:
             raise StopIteration
-        label = self.file_label_dict[self.current_file]
-        labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
         data = np.array(data)
+        # TODO: check if labels are integers or strings, if later we need to do something
+        # e.g. to convert strings to categorical, but what to do if we don't have
+        # full set of strings
+        labels = np.array(labels)
         if self.verbose:
             print("return shapes: data=%s labels=%s" % (np.shape(data), np.shape(labels)))
         return data, labels
