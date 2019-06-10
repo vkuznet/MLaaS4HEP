@@ -8,6 +8,12 @@ Description: Reader module provides various readers for different data-formats:
     JSON, CSV, Parquet, ROOT. It also allows access files either on local file
     system, HDFS or viw xrootd (for ROOT data format). The support for HDFS
     is provided by pyarrow library while for xrootd via uproot one.
+
+    There are 3 parameters each reader uses: nevts, chunk_size, nrows
+    nevts represents total number of events to read (for non-ROOT files it
+    is assigned to chunk_size). chunk_size is total buffer of events to read
+    from a file, nrows is total number events represented in a file.
+    RootDataReader reads data in chunks while others read entire file.
 """
 from __future__ import print_function, division, absolute_import
 
@@ -19,6 +25,7 @@ import json
 import random
 import argparse
 import traceback
+from itertools import takewhile, repeat
 
 # for managing compressed files
 import gzip
@@ -124,6 +131,19 @@ class OptionParser():
             dest="hists", default=False, help="Create historgams for ROOT tree")
         self.parser.add_argument("--verbose", action="store",
             dest="verbose", default=0, help="verbosity level")
+
+
+def nrows(filename):
+    """
+    Return total number of rows in given file, see
+    https://stackoverflow.com/questions/845058/how-to-get-line-count-cheaply-in-python
+    """
+    with fopen(filename, 'rb') as f:
+        if  sys.version.startswith('3.'):
+            bufgen = takewhile(lambda x: x, (f.raw.read(1024*1024) for _ in repeat(None)))
+        else:
+            bufgen = takewhile(lambda x: x, (f.read(1024*1024) for _ in repeat(None)))
+        return sum( buf.count(b'\n') for buf in bufgen )
 
 def dump_histograms(hdict, hgkeys):
     "Helper function to dump histograms"
@@ -246,12 +266,12 @@ class FileReader(object):
     def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0, reader=None):
         self.fin = fin
         self.label = label
-        self.chunk_size = chunk_size
+        self.chunk_size = chunk_size if nevts == -1 else nevts
         self.nevts = nevts
         self.preproc = preproc
         self.verbose = verbose
         self.keys = []
-        self.nrows = nevts
+        self.nrows = 0
         self.reader = reader
         self.istream = None
         self.type = self.__class__.__name__
@@ -346,6 +366,7 @@ class HDFSJSONReader(HDFSReader):
     def next(self):
         "Read next chunk of data from out file"
         lines = self.getdata().splitlines()
+        self.nrows = len(lines)
         for idx in range(self.chunk_size):
             time0 = time.time()
             if len(lines) <= self.pos:
@@ -400,6 +421,7 @@ class HDFSCSVReader(HDFSReader):
     def next(self):
         "Read next chunk of data from out file"
         lines = self.getdata().splitlines()
+        self.nrows = len(lines)
         for idx in range(self.chunk_size):
             time0 = time.time()
             if len(lines) <= self.pos:
@@ -441,11 +463,17 @@ class ParquetReader(HDFSReader):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
             super(ParquetReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+        self.pos = 0
 
     def next(self):
         "Read next chunk of data from out file"
         data = pq.read_table(self.fin)
         xdf = data.to_pandas()
+        shape = np.shape(xdf)
+        self.nrows = shape[0]
+        end = self.chunk_size if self.pos + self.chunk_size < shape[0] else shape[0]
+        xdf = xdf[self.pos:end]
+        self.pos = end
         self.keys = list(xdf.columns)
         if self.label in self.keys:
             label = xdf[self.label]
@@ -467,6 +495,7 @@ class JSONReader(FileReader):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
             super(JSONReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+        self.nrows = nrows(fin)
 
     def next(self):
         "Read next chunk of data from out file"
@@ -514,6 +543,7 @@ class CSVReader(FileReader):
         self.headers = headers
         self.keys = headers if headers else None
         self.sep = sep
+        self.nrows = nrows(fin)
 
     def next(self):
         "Read next chunk of data from out file"
@@ -540,6 +570,7 @@ class CSVReader(FileReader):
             else:
                 data = [rec.get(k, 0) for k in self.keys]
                 label = self.label
+            self.nrows += 1
             yield np.array(data)
 
 class AvroReader(FileReader):
@@ -573,6 +604,7 @@ class JsonReader(FileReader):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
         else:
             super(JsonReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
+        self.nrows = reader.nrows
 
 
 class CsvReader(FileReader):
@@ -588,6 +620,7 @@ class CsvReader(FileReader):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
         else:
             super(CsvReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
+        self.nrows = reader.nrows
 
 
 class RootDataReader(object):
@@ -1089,8 +1122,8 @@ def parse(reader, nevts, fout, hists):
         nevts = reader.nrows
     farr = []
     jarr = []
-    for idx in range(nevts):
-        if reader.type == 'RootDataReader':
+    if reader.type == 'RootDataReader':
+        for idx in range(nevts):
             xdf, _mask = reader.next()
             fdx = len(reader.flat_keys())
             flat = xdf[:fdx]
@@ -1099,12 +1132,13 @@ def parse(reader, nevts, fout, hists):
             jsize = object_size(jagged)
             farr.append(fsize)
             jarr.append(jsize)
-        else:
-            xdf = [r for r in reader.next()]
-            if not idx:
-                print('columns: {}'.format(json.dumps(reader.columns)))
-            print('data   : {}'.format(xdf))
-        count += 1
+            count += 1
+    else:
+        for data, _ in reader.next():
+            if not count:
+                print(json.dumps(reader.columns))
+            print(json.dumps(data.tolist()))
+            count += 1
     if reader.type == 'root':
         print("avg(flat)=%s, avg(jagged)=%s, ratio=%s" \
                 % (size_format(np.mean(farr)), size_format(np.mean(jarr)), np.mean(farr)/np.mean(jarr)))
