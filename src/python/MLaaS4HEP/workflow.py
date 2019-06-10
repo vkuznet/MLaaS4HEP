@@ -37,7 +37,7 @@ class OptionParser():
             help="either input file with files names or comma separate list of files")
         self.parser.add_argument("--dtype", action="store",
             dest="dtype", default=None,
-            help="specify data type of files: (hdfs-)/json, csv, avro")
+            help="specify data type of files: json, csv, parquet, avro, root")
         self.parser.add_argument("--labels", action="store",
             dest="labels", default='',
             help="either input file with labels names/ids or comma separate list of labels")
