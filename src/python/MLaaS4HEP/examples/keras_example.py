@@ -1,5 +1,4 @@
-from reader import DataReader, xfile
-from tfaas import DataGenerator
+from MLaaS4HEP.generator import RootDataGenerator
 
 class Trainer(object):
     def __init__(self, model, verbose=0):
@@ -23,7 +22,7 @@ def testKeras(files, params, specs):
     from keras.utils import to_categorical
     for fin in files:
         fin = xfile(fin)
-        gen = DataGenerator(fin, params, specs)
+        gen = RootDataGenerator(fin, params, specs)
         epochs = specs.get('epochs', 10)
         batch_size = specs.get('batch_size', 50)
         shuffle = specs.get('shuffle', True)

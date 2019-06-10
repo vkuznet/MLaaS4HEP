@@ -1,5 +1,5 @@
-from MLaaS4HEP.reader import RootDataReader
-from MLaaS4HEP.jarray.pytorch import JaggedArrayLinear # implementation of LinearLayer for JaggedArray
+from MLaaS4HEP.generator import RootDataGenerator
+from MLaaS4HEP.jarray.pytorch import JaggedArrayLinear
 import torch
 
 params = {} # user provide model parameters, e.g. number of events to read,
