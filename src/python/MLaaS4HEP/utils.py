@@ -20,6 +20,18 @@ except ImportError:
 # numpy modules
 import numpy as np
 
+# uproot
+try:
+    import uproot
+    try:
+        # uproot verion 3.X
+        from awkward import JaggedArray
+    except:
+        # uproot verion 2.X
+        from uproot.interp.jagged import JaggedArray
+except ImportError:
+    pass
+
 # numba
 try:
     from numba import jit
@@ -73,10 +85,7 @@ def nrows(filename):
     https://stackoverflow.com/questions/845058/how-to-get-line-count-cheaply-in-python
     """
     with fopen(filename, 'rb') as f:
-        if  sys.version.startswith('3.'):
-            bufgen = takewhile(lambda x: x, (f.raw.read(1024*1024) for _ in repeat(None)))
-        else:
-            bufgen = takewhile(lambda x: x, (f.read(1024*1024) for _ in repeat(None)))
+        bufgen = takewhile(lambda x: x, (f.read(1024*1024) for _ in repeat(None)))
         return sum( buf.count(b'\n') for buf in bufgen )
 
 def dump_histograms(hdict, hgkeys):
