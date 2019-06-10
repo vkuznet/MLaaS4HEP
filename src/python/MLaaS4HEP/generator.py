@@ -107,7 +107,8 @@ class MetaDataGenerator(object):
         self.start_idx = self.stop_idx
         self.stop_idx = self.start_idx+self.chunk_size
         if self.nevts != -1 and \
-           (self.start_idx > self.nevts or self.start_idx > self.reader[self.current_file].nrows):
+           (self.start_idx > self.nevts or \
+           (self.reader[self.current_file].nrows and self.start_idx > self.reader[self.current_file].nrows)):
             # we reached the limit of the reader
             self.start_idx = 0
             self.stop_idx = self.chunk_size
