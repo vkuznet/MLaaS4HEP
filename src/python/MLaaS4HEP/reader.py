@@ -268,7 +268,8 @@ class HDFSJSONReader(HDFSReader):
     def next(self):
         "Read next chunk of data from out file"
         lines = self.getdata().splitlines()
-        self.nrows = len(lines)
+        if not self.nrows:
+            self.nrows = len(lines)
         for idx in range(self.chunk_size):
             time0 = time.time()
             if len(lines) <= self.pos:
@@ -323,7 +324,8 @@ class HDFSCSVReader(HDFSReader):
     def next(self):
         "Read next chunk of data from out file"
         lines = self.getdata().splitlines()
-        self.nrows = len(lines)
+        if not self.nrows:
+            self.nrows = len(lines)
         for idx in range(self.chunk_size):
             time0 = time.time()
             if len(lines) <= self.pos:
