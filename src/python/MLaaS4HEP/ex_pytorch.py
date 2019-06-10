@@ -1,7 +1,7 @@
 """
 Basic example of ML model implemented via pytorch framework
 """
-from jarray.pytorch import JaggedArrayLinear
+from MLaaS4HEP.jarray.pytorch import JaggedArrayLinear
 import torch
 
 def model(idim):
