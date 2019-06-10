@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# find out where MLaaS4HEP is installed on a system
+root=`python -c "import MLaaS4HEP; print '/'.join(MLaaS4HEP.__file__.split('/')[:-1])"`
+# run actual script
+python $root/reader.py ${1+"$@"}
