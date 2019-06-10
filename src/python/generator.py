@@ -17,7 +17,7 @@ import random
 import numpy as np
 
 # MLaaS4HEP modules
-from reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
+from reader import file_type, RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
 
 def timestamp(msg='MLaaS4HEP'):
     "Return timestamp in pre-defined format"
@@ -25,17 +25,6 @@ def timestamp(msg='MLaaS4HEP'):
     tstamp = time.strftime('[%d/%b/%Y:%H:%M:%S]', tst)
     return '%s %s %s' % (msg.strip(), tstamp, time.mktime(tst))
 
-def file_type(fin):
-    "Return file type of given object"
-    if isinstance(fin, list):
-        fin = fin[0]
-    fin = fin.lower()
-    for ext in ['root', 'avro']:
-        if fin.endswith(ext):
-            return ext
-    for ext in ['json', 'csv']:
-        if fin.endswith(ext) or fin.endswith('%s.gz' % ext) or fin.endswith('%s.bz2' % ext):
-            return ext
 
 class MetaDataGenerator(object):
     """

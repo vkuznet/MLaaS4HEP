@@ -97,27 +97,29 @@ class OptionParser():
             dest="fin", default="", help="Input ROOT file")
         self.parser.add_argument("--fout", action="store",
             dest="fout", default="", help="Output file name for ROOT specs")
+        self.parser.add_argument("--preproc", action="store",
+            dest="preproc", default=None, help="File name containing pre-processing function")
         self.parser.add_argument("--nan", action="store",
-            dest="nan", default=np.nan, help="NaN value for padding, default np.nan")
+            dest="nan", default=np.nan, help="NaN value for padding, default np.nan [for ROOT file]")
         self.parser.add_argument("--branch", action="store",
-            dest="branch", default="Events", help="Input ROOT file branch, default Events")
+            dest="branch", default="Events", help="Input ROOT file branch, default Events [for ROOT file]")
         self.parser.add_argument("--identifier", action="store",
-            dest="identifier", default="run,event,luminosityBlock", help="Event identifier, default run,event,luminosityBlock")
+            dest="identifier", default="run,event,luminosityBlock", help="Event identifier, default run,event,luminosityBlock [for ROOT file]")
         self.parser.add_argument("--branches", action="store",
-            dest="branches", default="", help="Comma separated list of branches to read, default all")
+            dest="branches", default="", help="Comma separated list of branches to read, default all [for ROOT file]")
         self.parser.add_argument("--exclude-branches", action="store",
-            dest="exclude_branches", default="", help="Comma separated list of branches to exclude, default None")
+            dest="exclude_branches", default="", help="Comma separated list of branches to exclude, default None [for ROOT file]")
         self.parser.add_argument("--nevts", action="store",
-            dest="nevts", default=5, help="number of events to parse, default 5, use -1 to read all events)")
+            dest="nevts", default=5, help="number of events to process, default 5, use -1 to read all events)")
         self.parser.add_argument("--chunk-size", action="store",
-            dest="chunk_size", default=1000, help="Chunk size to use, default 1000")
+            dest="chunk_size", default=1000, help="Chunk size (nevts) to read, default 1000")
         self.parser.add_argument("--specs", action="store",
-            dest="specs", default=None, help="Input specs file")
+            dest="specs", default=None, help="Input specs file [for ROOT file]")
         self.parser.add_argument("--redirector", action="store",
             dest="redirector", default='root://cms-xrd-global.cern.ch',
-            help="XrootD redirector, default root://cms-xrd-global.cern.ch")
+            help="XrootD redirector, default root://cms-xrd-global.cern.ch [for ROOT file]")
         self.parser.add_argument("--info", action="store_true",
-            dest="info", default=False, help="Provide info about ROOT tree")
+            dest="info", default=False, help="Provide info about ROOT tree [for ROOT file]")
         self.parser.add_argument("--hists", action="store_true",
             dest="hists", default=False, help="Create historgams for ROOT tree")
         self.parser.add_argument("--verbose", action="store",
@@ -224,6 +226,19 @@ def fopen(fin, mode='r'):
         stream = open(fin, mode)
     return stream
 
+def file_type(fin):
+    "Return file type of given object"
+    if isinstance(fin, list):
+        fin = fin[0]
+    fin = fin.lower()
+    for ext in ['root', 'avro']:
+        if fin.endswith(ext):
+            return ext
+    for ext in ['json', 'csv']:
+        if fin.endswith(ext) or fin.endswith('%s.gz' % ext) or fin.endswith('%s.bz2' % ext):
+            return ext
+
+
 class FileReader(object):
     """
     FileReader represents generic interface to read data files
@@ -239,6 +254,7 @@ class FileReader(object):
         self.nrows = nevts
         self.reader = reader
         self.istream = None
+        self.type = self.__class__.__name__
         if not fin.lower().startswith('hdfs://'):
             if hasattr(fin, 'readline'): # we already given a file descriptor
                 self.istream = fin
@@ -249,6 +265,14 @@ class FileReader(object):
                 print('init {} with {}'.format(self.__class__.__name__, self.reader))
             else:
                 print('init {}'.format(self.__class__.__name__))
+
+    def info(self):
+        "Provide basic info about class attributes"
+        print('{} {}'.format(self.type, self))
+        mkey = max([len(k) for k in self.__dict__.keys()])
+        for key, val in self.__dict__.items():
+            pad = ' ' * (mkey - len(key))
+            print('{}{}: {}'.format(key, pad, val))
 
     def __exit__(self):
         "Exit function for our class"
@@ -580,6 +604,7 @@ class RootDataReader(object):
             exclude_branches=None, identifier=['run', 'event', 'luminosityBlock'],
             chunk_size=1000, nevts=-1, specs=None, nan=np.nan, histograms=False,
             redirector='root://cms-xrd-global.cern.ch', verbose=0):
+        self.type = self.__class__.__name__
         self.fin = xfile(fin, redirector)
         self.verbose = verbose
         if self.verbose:
@@ -1064,18 +1089,25 @@ def parse(reader, nevts, fout, hists):
         nevts = reader.nrows
     farr = []
     jarr = []
-    for _ in range(nevts):
-        xdf, _mask = reader.next()
-        fdx = len(reader.flat_keys())
-        flat = xdf[:fdx]
-        jagged = xdf[fdx:]
-        fsize = object_size(flat)
-        jsize = object_size(jagged)
-        farr.append(fsize)
-        jarr.append(jsize)
+    for idx in range(nevts):
+        if reader.type == 'RootDataReader':
+            xdf, _mask = reader.next()
+            fdx = len(reader.flat_keys())
+            flat = xdf[:fdx]
+            jagged = xdf[fdx:]
+            fsize = object_size(flat)
+            jsize = object_size(jagged)
+            farr.append(fsize)
+            jarr.append(jsize)
+        else:
+            xdf = [r for r in reader.next()]
+            if not idx:
+                print('columns: {}'.format(json.dumps(reader.columns)))
+            print('data   : {}'.format(xdf))
         count += 1
-    print("avg(flat)=%s, avg(jagged)=%s, ratio=%s" \
-            % (size_format(np.mean(farr)), size_format(np.mean(jarr)), np.mean(farr)/np.mean(jarr)))
+    if reader.type == 'root':
+        print("avg(flat)=%s, avg(jagged)=%s, ratio=%s" \
+                % (size_format(np.mean(farr)), size_format(np.mean(jarr)), np.mean(farr)/np.mean(jarr)))
     totTime = time.time()-time0
     print("Read %s evts, %s Hz, total time %s" % (
         count, count/totTime, totTime))
@@ -1119,6 +1151,7 @@ def main():
     chunk_size = int(opts.chunk_size)
     nan = float(opts.nan)
     nevts = int(opts.nevts)
+    preproc = opts.preproc
     specs = opts.specs
     branch = opts.branch
     branches = opts.branches.split(',') if opts.branches else []
@@ -1131,10 +1164,20 @@ def main():
             exclude_branches = opts.exclude_branches.split(',')
     hists = opts.hists
     identifier = [k.strip() for k in opts.identifier.split(',')]
-    reader = RootDataReader(fin, branch=branch, selected_branches=branches,
-            identifier=identifier, exclude_branches=exclude_branches, histograms=hists,
-            nan=nan, chunk_size=chunk_size,
-            nevts=nevts, specs=specs, redirector=opts.redirector, verbose=verbose)
+    label = None
+    if file_type(fin) == 'root':
+        reader = RootDataReader(fin, branch=branch, selected_branches=branches,
+                identifier=identifier, exclude_branches=exclude_branches, histograms=hists,
+                nan=nan, chunk_size=chunk_size,
+                nevts=nevts, specs=specs, redirector=opts.redirector, verbose=verbose)
+    elif file_type(fin) == 'csv':
+        reader = CsvReader(fin, label, chunk_size, nevts, preproc, verbose)
+    elif file_type(fin) == 'json':
+        reader = JsonReader(fin, label, chunk_size, nevts, preproc, verbose)
+    elif file_type(fin) == 'parquet':
+        reader = ParquetReader(fin, label, chunk_size, nevts, preproc, verbose)
+    elif file_type(fin) == 'avro':
+        reader = AvroReader(fin, label, chunk_size, nevts, preproc, verbose)
     if opts.info:
         reader.info()
     else:
