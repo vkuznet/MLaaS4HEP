@@ -55,14 +55,18 @@ framework to read HEP ROOT data in chunks. Both modules are based on
 
 Basic usage
 ```
+# setup the proper environment, e.g. 
+# export PYTHONPATH=/path/src/python # path to MLaaS4HEP python framework
+# export PATH=/path/bin:$PATH # path to MLaaS4HEP binaries
+
 # get help and option description
-./reader.py --help
+reader --help
 
 # here is a concrete example of reading local ROOT file:
-./reader.py --fin=/opt/cms/data/Tau_Run2017F-31Mar2018-v1_NANOAOD.root --info --verbose=1 --nevts=2000
+reader --fin=/opt/cms/data/Tau_Run2017F-31Mar2018-v1_NANOAOD.root --info --verbose=1 --nevts=2000
 
 # here is an example of reading remote ROOT file:
-./reader.py --fin=root://cms-xrd-global.cern.ch//store/data/Run2017F/Tau/NANOAOD/31Mar2018-v1/20000/6C6F7EAE-7880-E811-82C1-008CFA165F28.root --verbose=1 --nevts=2000 --info
+reader --fin=root://cms-xrd-global.cern.ch//store/data/Run2017F/Tau/NANOAOD/31Mar2018-v1/20000/6C6F7EAE-7880-E811-82C1-008CFA165F28.root --verbose=1 --nevts=2000 --info
 
 # both of aforementioned commands produce the following output
 First pass: 2000 events, 35.4363200665 sec, shape (2316,) 648 branches: flat 232 jagged
@@ -95,16 +99,20 @@ If you clone the repo and setup your PYTHONPATH you should be able to run it as
 simple as
 
 ```
-./workflow.py --help
+# setup the proper environment, e.g. 
+# export PYTHONPATH=/path/src/python # path to MLaaS4HEP python framework
+# export PATH=/path/bin:$PATH # path to MLaaS4HEP binaries
+
+workflow --help
 
 # run the code with list of LFNs from files.txt and using labels file labels.txt
-./workflow.py --files=files.txt --labels=labels.txt
+workflow --files=files.txt --labels=labels.txt
 
 # run pytorch example
-./workflow.py --files=files.txt --labels=labels.txt --model=ex_pytorch.py
+workflow --files=files.txt --labels=labels.txt --model=ex_pytorch.py
 
 # run keras example
-./workflow.py --files=files.txt --labels=labels.txt --model=ex_keras.py
+workflow --files=files.txt --labels=labels.txt --model=ex_keras.py
 
 # cat files.txt
 #dasgoclient -query="file dataset=/Tau/Run2018C-14Sep2018_ver3-v1/NANOAOD"
@@ -126,7 +134,7 @@ simple as
 1
 
 # run keras example and save our model into external file
-./workflow.py --files=files.txt --labels=labels.txt --model=ex_keras.py --fout=model.pb
+workflow --files=files.txt --labels=labels.txt --model=ex_keras.py --fout=model.pb
 ```
 
 The `workflow.py` relies on two JSON files, one which contains parameters for
@@ -147,7 +155,7 @@ hdfs:///path/file2.json.gz
 
 # run workflow with your set of files, labels, model and preprocessing function
 # and save it into model.pb file
-./workflow.py --files=files.txt --labels=labels.txt --model=ex_keras.py --preproc=ex_preproc.py --fout=model.pb
+workflow --files=files.txt --labels=labels.txt --model=ex_keras.py --preproc=ex_preproc.py --fout=model.pb
 ```
 
 ### HEP resnet
