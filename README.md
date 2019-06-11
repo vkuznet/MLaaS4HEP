@@ -45,6 +45,19 @@ conda install -c pytorch pytorch
 conda install keras numpy pandas
 ```
 
+### Instalation
+The easiest way to install and run
+[MLaaS4HEP](https://cloud.docker.com/u/veknet/repository/docker/veknet/mlaas4hep)
+and
+[TFaaS](https://cloud.docker.com/u/veknet/repository/docker/veknet/tfaas)
+is to use pre-build docker images
+```
+# run MLaaS4HEP docker container
+docker run veknet/mlaas4hep
+# run TFaaS docker container
+docker run veknet/tfaas
+```
+
 ### Reading ROOT files
 MLaaS4HEP python repository provides two base modules to read and manipulate with
 HEP ROOT files. The `reader.py` module defines a DataReader class which is
