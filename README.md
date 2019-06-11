@@ -1,6 +1,6 @@
 ### Machine Learning as a Service for HEP
 
-[![Build Status](https://travis-ci.org/vkuznet/TFaaS.svg?branch=master)](https://travis-ci.org/vkuznet/TFaaS)
+[![Build Status](https://travis-ci.org/vkuznet/MLaaS4HEP.svg?branch=master)](https://travis-ci.org/vkuznet/MLaaS4HEP)
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/vkuznet/LICENSE)
 [![DOI](https://zenodo.org/badge/156857396.svg)](https://zenodo.org/badge/latestdoi/156857396)
 [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20as%20a%20service%20for%20HEP%20community&url=https://github.com/vkuznet/MLaaS4HEP&hashtags=python,ml)
