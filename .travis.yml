@@ -6,22 +6,9 @@ python:
 # command to install dependencies
 install: 
   - pip install -r requirements.txt  # install dependencies
-
   - git clone https://github.com/vkuznet/MLaaS4HEP
-
-  # install
   - python setup.py install
 
 # command to run tests
 # script: 
 #   - python setup.py test
-
-  
-# notifications:
-email: true
-    on_success: never
-    on_failure: always
-  
-# speedup the build slightly
-#matrix:
-#  fast_finish: true
