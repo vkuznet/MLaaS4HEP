@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
-#pylint: disable=
+#pylint: disable=R0915,R0912,R0913,R0914,R0902
 """
 File       : generator.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
-Description: defines DataGenerator for MLaaS4HEP
+Generator module defines various data generator for MLaaS4HEP framework.
 """
+from __future__ import print_function, division, absolute_import
 
 # system modules
 import os
@@ -25,7 +26,7 @@ class MetaDataGenerator(object):
     """
     MetaDataGenerator class provides interface to read files.
     """
-    def __init__(self, fin, labels, params=None, specs=None, preproc=None, dtype=None):
+    def __init__(self, fin, labels, params=None, preproc=None, dtype=None):
         "Initialization function for Data Generator"
         time0 = time.time()
         self.dtype = str(dtype).lower()
@@ -69,16 +70,16 @@ class MetaDataGenerator(object):
         # loop over files and create individual readers for them, then put them in a global reader
         for fname, label in self.file_label_dict.items():
             if self.dtype == 'json' or file_type(fname) == 'json':
-                reader = JsonReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
+                reader = JsonReader(fname, label, chunk_size=chunk_size, nevts=self.evts, \
                         preproc=self.preproc, verbose=self.verbose)
-            elif self.dtype == 'csv' or file_type(fname, label) == 'csv':
-                reader = CsvReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
+            elif self.dtype == 'csv' or file_type(fname) == 'csv':
+                reader = CsvReader(fname, label, chunk_size=chunk_size, nevts=self.evts, \
                         preproc=self.preproc, verbose=self.verbose)
-            elif self.dtype == 'avro' or file_type(fname, label) == 'avro':
-                reader = AvroReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
+            elif self.dtype == 'avro' or file_type(fname) == 'avro':
+                reader = AvroReader(fname, label, chunk_size=chunk_size, nevts=self.evts, \
                         preproc=self.preproc, verbose=self.verbose)
-            elif self.dtype == 'parquet' or file_type(fname, label) == 'parquet':
-                reader = ParquetReader(fname, label, chunk_size=chunk_size, nevts=self.evts,
+            elif self.dtype == 'parquet' or file_type(fname) == 'parquet':
+                reader = ParquetReader(fname, label, chunk_size=chunk_size, nevts=self.evts, \
                         preproc=self.preproc, verbose=self.verbose)
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
@@ -94,21 +95,24 @@ class MetaDataGenerator(object):
     def nevts(self):
         "Return number of events of current file"
         return self.evts if self.evts != -1 else self.reader[self.current_file].nrows
-         
+
     def __len__(self):
         "Return total number of batches this generator can deliver"
         return int(np.floor(self.nevts / self.batch_size))
 
     def next(self):
         "Return next batch of events"
-        msg = "\nread chunk [{}:{}] from {} label {}".format(self.start_idx, self.stop_idx, self.current_file, self.file_label_dict[self.current_file])
-        gen = self.read_data(self.start_idx, self.stop_idx, verbose=self.verbose)
+        msg = "\nread chunk [{}:{}] from {} label {}"\
+                .format(self.start_idx, self.stop_idx, self.current_file, \
+                self.file_label_dict[self.current_file])
+        gen = self.read_data(self.start_idx, self.stop_idx)
         # advance start and stop indecies
         self.start_idx = self.stop_idx
         self.stop_idx = self.start_idx+self.chunk_size
         if self.nevts != -1 and \
            (self.start_idx > self.nevts or \
-           (self.reader[self.current_file].nrows and self.start_idx > self.reader[self.current_file].nrows)):
+           (self.reader[self.current_file].nrows and \
+           self.start_idx > self.reader[self.current_file].nrows)):
             # we reached the limit of the reader
             self.start_idx = 0
             self.stop_idx = self.chunk_size
@@ -123,9 +127,6 @@ class MetaDataGenerator(object):
         if not data:
             raise StopIteration
         data = np.array(data)
-        # TODO: check if labels are integers or strings, if later we need to do something
-        # e.g. to convert strings to categorical, but what to do if we don't have
-        # full set of strings
         labels = np.array(labels)
         if self.verbose:
             print("return shapes: data=%s labels=%s" % (np.shape(data), np.shape(labels)))
@@ -139,7 +140,7 @@ class MetaDataGenerator(object):
         "Provide generator capabilities to the class"
         return self.next()
 
-    def read_data(self, start=0, stop=100, verbose=0):
+    def read_data(self, start=0, stop=100):
         "Helper function to read data via reader"
         # if we exceed number of events in a file we discard it
         if self.nevts < self.reader_counter[self.current_file]:
@@ -149,7 +150,7 @@ class MetaDataGenerator(object):
                         self.reader_counter[self.current_file], self.nevts)
                 print(msg)
             self.files.remove(self.current_file)
-            if len(self.files):
+            if self.files:
                 self.current_file = self.files[0]
             else:
                 print("# no more files to read from")
@@ -241,10 +242,10 @@ class RootDataGenerator(object):
                         print("loading specs {}".format(sname))
                     specs = json.load(open(sname))
 
-            reader = RootDataReader(fname, branch=branch, selected_branches=branches,
-                exclude_branches=exclude_branches, nan=nan,
-                chunk_size=chunk_size, nevts=0, specs=specs,
-                redirector=redirector, verbose=verbose)
+            reader = RootDataReader(fname, branch=branch, \
+                    selected_branches=branches, exclude_branches=exclude_branches, \
+                    nan=nan, chunk_size=chunk_size, nevts=0, specs=specs, \
+                    redirector=redirector, verbose=verbose)
 
             if not os.path.isfile(sname):
                 if verbose:
@@ -265,15 +266,17 @@ class RootDataGenerator(object):
     def nevts(self):
         "Return number of events of current file"
         return self.evts if self.evts != -1 else self.reader[self.current_file].nrows
-         
+
     def __len__(self):
         "Return total number of batches this generator can deliver"
         return int(np.floor(self.nevts / self.batch_size))
 
     def next(self):
         "Return next batch of events in form of data and mask vectors"
-        msg = "\nread chunk [{}:{}] from {} label {}".format(self.start_idx, self.stop_idx, self.current_file, self.file_label_dict[self.current_file])
-        gen = self.read_data(self.start_idx, self.stop_idx, verbose=self.verbose)
+        msg = "\nread chunk [{}:{}] from {} label {}"\
+                .format(self.start_idx, self.stop_idx, self.current_file, \
+                self.file_label_dict[self.current_file])
+        gen = self.read_data(self.start_idx, self.stop_idx)
         # advance start and stop indecies
         self.start_idx = self.stop_idx
         self.stop_idx = self.start_idx+self.chunk_size
@@ -301,7 +304,7 @@ class RootDataGenerator(object):
         "Provide generator capabilities to the class"
         return self.next()
 
-    def read_data(self, start=0, stop=100, verbose=0):
+    def read_data(self, start=0, stop=100):
         "Helper function to read ROOT data via uproot reader"
         # if we exceed number of events in a file we discard it
         if self.nevts < self.reader_counter[self.current_file]:
@@ -311,7 +314,7 @@ class RootDataGenerator(object):
                         self.reader_counter[self.current_file], self.nevts)
                 print(msg)
             self.files.remove(self.current_file)
-            if len(self.files):
+            if self.files:
                 self.current_file = self.files[0]
             else:
                 print("# no more files to read from")
@@ -337,5 +340,3 @@ class RootDataGenerator(object):
             nevts = self.reader_counter[self.current_file]
             msg = "\ntotal read {} evts from {}".format(nevts, current_file)
             print(msg)
-
-

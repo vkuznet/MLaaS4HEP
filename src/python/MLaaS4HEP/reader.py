@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
-#pylint: disable=
+#pylint: disable=E1004,R0912,R0913,R0914,R0915,R0903,R0902,C0302
 """
 File       : reader.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
-Description: Reader module provides various readers for different data-formats:
-    JSON, CSV, Parquet, ROOT. It also allows access files either on local file
-    system, HDFS or viw xrootd (for ROOT data format). The support for HDFS
-    is provided by pyarrow library while for xrootd via uproot one.
+Reader module provides various readers for different data-formats:
+JSON, CSV, Parquet, ROOT. It also allows access files either on local file
+system, HDFS or viw xrootd (for ROOT data format). The support for HDFS
+is provided by pyarrow library while for xrootd via uproot one.
 
-    There are 3 parameters each reader uses: nevts, chunk_size, nrows
-    nevts represents total number of events to read (for non-ROOT files it
-    is assigned to chunk_size). chunk_size is total buffer of events to read
-    from a file, nrows is total number events represented in a file.
-    RootDataReader reads data in chunks while others read entire file.
+There are 3 parameters each reader uses: nevts, chunk_size, nrows
+nevts represents total number of events to read (for non-ROOT files it
+is assigned to chunk_size). chunk_size is total buffer of events to read
+from a file, nrows is total number events represented in a file.
+RootDataReader reads data in chunks while others read entire file.
 """
 from __future__ import print_function, division, absolute_import
 
@@ -25,7 +25,6 @@ import json
 import random
 import argparse
 import traceback
-from itertools import takewhile, repeat
 
 import gzip
 
@@ -33,15 +32,14 @@ import gzip
 import numpy as np
 
 # pandas modules
-pd = None
-try:
-    # https://github.com/modin-project/modin
-    import modin.pandas as pd
-except ImportError:
-    try:
-        import pandas as pd
-    except ImportError:
-        pass
+# pd = None
+# try: # https://github.com/modin-project/modin
+#     import modin.pandas as pd
+# except ImportError:
+#     try:
+#         import pandas as pd
+#     except ImportError:
+#         pass
 
 # uproot
 try:
@@ -49,22 +47,22 @@ try:
     try:
         # uproot verion 3.X
         from awkward import JaggedArray
-    except:
+    except ImportError:
         # uproot verion 2.X
         from uproot.interp.jagged import JaggedArray
 except ImportError:
     pass
 
 # numba
-try:
-    from numba import jit
-except ImportError:
-    def jit(f):
-        "Simple decorator which calls underlying function"
-        def new_f():
-            "Action function"
-            f()
-        return new_f
+# try:
+#     from numba import jit
+# except ImportError:
+#     def jit(f):
+#         "Simple decorator which calls underlying function"
+#         def new_f():
+#             "Action function"
+#             f()
+#         return new_f
 
 # psutil
 try:
@@ -75,10 +73,10 @@ except ImportError:
 # histogrammar
 try:
     import histogrammar as hg
-    import matplotlib
-    matplotlib.use('Agg')
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
+#     import matplotlib
+#     matplotlib.use('Agg')
+#     from matplotlib.backends.backend_pdf import PdfPages
+#     import matplotlib.pyplot as plt
 except ImportError:
     hg = None
 
@@ -88,47 +86,57 @@ except ImportError:
 try:
     import pyarrow
     import pyarrow.parquet as pq
-except:
+except ImportError:
     pyarrow = None
 
 # MLaaS4HEP modules
-from MLaaS4HEP.utils import nrows, dump_histograms, make_plot, mem_usage, performance
+from MLaaS4HEP.utils import nrows, dump_histograms, mem_usage, performance
 from MLaaS4HEP.utils import steps, fopen, file_type, load_code
 
-class OptionParser():
+class OptionParser(object):
+    "Option parser class for reader arguments"
     def __init__(self):
         "User based option parser"
         self.parser = argparse.ArgumentParser(prog='PROG')
-        self.parser.add_argument("--fin", action="store",
+        self.parser.add_argument("--fin", action="store", \
             dest="fin", default="", help="Input ROOT file")
-        self.parser.add_argument("--fout", action="store",
+        self.parser.add_argument("--fout", action="store", \
             dest="fout", default="", help="Output file name for ROOT specs")
-        self.parser.add_argument("--preproc", action="store",
-            dest="preproc", default=None, help="File name containing pre-processing function")
-        self.parser.add_argument("--nan", action="store",
-            dest="nan", default=np.nan, help="NaN value for padding, default np.nan [for ROOT file]")
-        self.parser.add_argument("--branch", action="store",
-            dest="branch", default="Events", help="Input ROOT file branch, default Events [for ROOT file]")
-        self.parser.add_argument("--identifier", action="store",
-            dest="identifier", default="run,event,luminosityBlock", help="Event identifier, default run,event,luminosityBlock [for ROOT file]")
-        self.parser.add_argument("--branches", action="store",
-            dest="branches", default="", help="Comma separated list of branches to read, default all [for ROOT file]")
-        self.parser.add_argument("--exclude-branches", action="store",
-            dest="exclude_branches", default="", help="Comma separated list of branches to exclude, default None [for ROOT file]")
-        self.parser.add_argument("--nevts", action="store",
-            dest="nevts", default=5, help="number of events to process, default 5, use -1 to read all events)")
-        self.parser.add_argument("--chunk-size", action="store",
+        self.parser.add_argument("--preproc", action="store", \
+            dest="preproc", default=None, \
+            help="File name containing pre-processing function")
+        self.parser.add_argument("--nan", action="store", \
+            dest="nan", default=np.nan, \
+            help="NaN value for padding, default np.nan [for ROOT file]")
+        self.parser.add_argument("--branch", action="store", \
+            dest="branch", default="Events", \
+            help="Input ROOT file branch, default Events [for ROOT file]")
+        self.parser.add_argument("--identifier", action="store", \
+            dest="identifier", default="run,event,luminosityBlock", \
+            help="Event identifier, default run,event,luminosityBlock [for ROOT file]")
+        self.parser.add_argument("--branches", action="store", \
+            dest="branches", default="", \
+            help="Comma separated list of branches to read, default all [for ROOT file]")
+        self.parser.add_argument("--exclude-branches", action="store", \
+            dest="exclude_branches", default="", \
+            help="Comma separated list of branches to exclude, default None [for ROOT file]")
+        self.parser.add_argument("--nevts", action="store", \
+            dest="nevts", default=5, \
+            help="number of events to process, default 5, use -1 to read all events)")
+        self.parser.add_argument("--chunk-size", action="store", \
             dest="chunk_size", default=1000, help="Chunk size (nevts) to read, default 1000")
-        self.parser.add_argument("--specs", action="store",
-            dest="specs", default=None, help="Input specs file [for ROOT file]")
-        self.parser.add_argument("--redirector", action="store",
-            dest="redirector", default='root://cms-xrd-global.cern.ch',
+        self.parser.add_argument("--specs", action="store", \
+            dest="specs", default=None, \
+            help="Input specs file [for ROOT file]")
+        self.parser.add_argument("--redirector", action="store", \
+            dest="redirector", default='root://cms-xrd-global.cern.ch', \
             help="XrootD redirector, default root://cms-xrd-global.cern.ch [for ROOT file]")
-        self.parser.add_argument("--info", action="store_true",
-            dest="info", default=False, help="Provide info about ROOT tree [for ROOT file]")
-        self.parser.add_argument("--hists", action="store_true",
+        self.parser.add_argument("--info", action="store_true", \
+            dest="info", default=False, \
+            help="Provide info about ROOT tree [for ROOT file]")
+        self.parser.add_argument("--hists", action="store_true", \
             dest="hists", default=False, help="Create historgams for ROOT tree")
-        self.parser.add_argument("--verbose", action="store",
+        self.parser.add_argument("--verbose", action="store", \
             dest="verbose", default=0, help="verbosity level")
 
 def dim_jarr(arr):
@@ -149,7 +157,7 @@ def min_max_arr(arr):
             minv = 1e15
             maxv = -1e15
             for item in arr:
-                if len(item) == 0:
+                if not item:
                     continue
                 if np.min(item) < minv:
                     minv = np.min(item)
@@ -191,12 +199,12 @@ class FileReader(object):
     def info(self):
         "Provide basic info about class attributes"
         print('{} {}'.format(self.type, self))
-        mkey = max([len(k) for k in self.__dict__.keys()])
+        mkey = max([len(k) for k in self.__dict__])
         for key, val in self.__dict__.items():
             pad = ' ' * (mkey - len(key))
             print('{}{}: {}'.format(key, pad, val))
 
-    def __exit__(self):
+    def __exit__(self, gtype, value, gtraceback):
         "Exit function for our class"
         if self.istream and hasattr(self.istream, 'close'):
             self.istream.close()
@@ -212,12 +220,23 @@ class FileReader(object):
 
     def next(self):
         "Read next chunk of data from out file"
-        if self.reader:
-            return self.reader.next()
+        return self.reader.next() if self.reader else []
 
 #
 # HDFS readers
 #
+
+def hdfs_read(fin):
+    "Read data from the fiven file into numpy array"
+    if pyarrow:
+        client = pyarrow.hdfs.connect()
+        with client.open(fin) as istream:
+            raw = istream.read()
+            if fin.endswith('gz'):
+                raw = getattr(gzip, "decompress")(raw)
+            return raw
+    else:
+        raise Exception("pyarrow is not available")
 
 class HDFSReader(FileReader):
     """
@@ -227,22 +246,11 @@ class HDFSReader(FileReader):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(HDFSReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+            super(HDFSReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose)
         self.raw = None
         self.keys = None
         self.pos = 0
-
-    def read(self, fin):
-        "Read data from the fiven file into numpy array"
-        if pyarrow:
-            client=pyarrow.hdfs.connect()
-            with client.open(fin) as istream:
-                raw = istream.read()
-                if fin.endswith('gz'):
-                    raw = gzip.decompress(raw)
-                return raw
-        else:
-            raise Exception("pyarrow is not available")
 
     def getdata(self):
         "Read next chunk of data from out file"
@@ -250,7 +258,7 @@ class HDFSReader(FileReader):
             if self.verbose:
                 print("%s reading %s" % (self.__class__.__name__, self.fin))
             time0 = time.time()
-            self.raw = self.read(self.fin)
+            self.raw = hdfs_read(self.fin)
             if self.verbose:
                 print("read %s in %s sec" % (self.fin, time.time()-time0))
         return self.raw
@@ -263,7 +271,8 @@ class HDFSJSONReader(HDFSReader):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(HDFSJSONReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+            super(HDFSJSONReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose)
 
     def next(self):
         "Read next chunk of data from out file"
@@ -306,18 +315,21 @@ class HDFSJSONReader(HDFSReader):
             self.pos += 1
             data = np.array(data)
             if self.verbose > 1:
-                print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
+                print("read data chunk", self.pos, time.time()-time0, \
+                        self.chunk_size, np.shape(data))
             yield data, label
 
 class HDFSCSVReader(HDFSReader):
     """
     HDFSCSVReader represents interface to read CSV file from HDFS storage
     """
-    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0, headers=None, separator=','):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, \
+            verbose=0, headers=None, separator=','):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(HDFSCSVReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+            super(HDFSCSVReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose)
         self.headers = headers
         self.sep = separator
 
@@ -355,7 +367,8 @@ class HDFSCSVReader(HDFSReader):
             self.pos += 1
             data = np.array(data)
             if self.verbose > 1:
-                print("read data chunk", self.pos, time.time()-time0, self.chunk_size, np.shape(data))
+                print("read data chunk", self.pos, time.time()-time0, \
+                        self.chunk_size, np.shape(data))
             yield data, label
 
 class ParquetReader(HDFSReader):
@@ -366,7 +379,8 @@ class ParquetReader(HDFSReader):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(ParquetReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+            super(ParquetReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose)
         self.pos = 0
 
     def next(self):
@@ -398,7 +412,8 @@ class JSONReader(FileReader):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(JSONReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+            super(JSONReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose)
         self.nrows = nrows(fin)
 
     def next(self):
@@ -439,14 +454,16 @@ class CSVReader(FileReader):
     """
     CSVReader represents interface to read CSV file from local file system
     """
-    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, verbose=0, headers=None, separator=','):
+    def __init__(self, fin, label, chunk_size=1000, nevts=-1, preproc=None, \
+            verbose=0, headers=None, separator=','):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(CSVReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+            super(CSVReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose)
         self.headers = headers
         self.keys = headers if headers else None
-        self.sep = sep
+        self.sep = separator
         self.nrows = nrows(fin)
 
     def next(self):
@@ -456,7 +473,7 @@ class CSVReader(FileReader):
             if not line:
                 continue
             row = line.split(self.sep)
-            if not rec:
+            if not row:
                 continue
             if self.preproc:
                 row = self.preproc(row)
@@ -475,7 +492,7 @@ class CSVReader(FileReader):
                 data = [rec.get(k, 0) for k in self.keys]
                 label = self.label
             self.nrows += 1
-            yield np.array(data)
+            yield np.array(data), label
 
 class AvroReader(FileReader):
     """
@@ -486,11 +503,12 @@ class AvroReader(FileReader):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose)
         else:
-            super(AvroReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose)
+            super(AvroReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose)
 
     def next(self):
         "Read next chunk of data from out file"
-        raise NotImplemented
+        raise NotImplementedError
 
 #
 # User based classes
@@ -507,7 +525,8 @@ class JsonReader(FileReader):
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
         else:
-            super(JsonReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
+            super(JsonReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose, reader)
         self.nrows = reader.nrows
 
 
@@ -519,11 +538,12 @@ class CsvReader(FileReader):
         if  fin.lower().startswith('hdfs://'):
             reader = HDFSCSVReader(fin, label, chunk_size, nevts, preproc)
         else:
-            reader = PlainCSVReader(fin, label, chunk_size, nevts, preproc)
+            reader = CSVReader(fin, label, chunk_size, nevts, preproc)
         if  sys.version.startswith('3.'):
             super().__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
         else:
-            super(CsvReader, self).__init__(fin, label, chunk_size, nevts, preproc, verbose, reader)
+            super(CsvReader, self).__init__(\
+                    fin, label, chunk_size, nevts, preproc, verbose, reader)
         self.nrows = reader.nrows
 
 
@@ -537,9 +557,9 @@ class RootDataReader(object):
     The second pass uses specs to convert jagged structure of
     ROOT file into flat DataFrame format.
     """
-    def __init__(self, fin, branch='Events', selected_branches=None,
-            exclude_branches=None, identifier=['run', 'event', 'luminosityBlock'],
-            chunk_size=1000, nevts=-1, specs=None, nan=np.nan, histograms=False,
+    def __init__(self, fin, branch='Events', selected_branches=None, \
+            exclude_branches=None, identifier=None, \
+            chunk_size=1000, nevts=-1, specs=None, nan=np.nan, histograms=False, \
             redirector='root://cms-xrd-global.cern.ch', verbose=0):
         self.type = self.__class__.__name__
         self.fin = xfile(fin, redirector)
@@ -550,13 +570,12 @@ class RootDataReader(object):
         self.branches = {}
         self.gen = None
         self.out_branches = []
-        self.identifier = identifier
+        self.identifier = identifier if identifier else ['run', 'event', 'luminosityBlock']
         self.tree = self.istream[branch]
         self.nrows = self.tree.numentries
         self.nevts = nevts
         self.idx = -1
         self.chunk_idx = 0
-        self.lastIdx = -1
         self.chunk_size = chunk_size if chunk_size < self.nrows else self.nrows
         self.nan = float(nan)
         self.attrs = []
@@ -581,7 +600,6 @@ class RootDataReader(object):
             print("{} init is complete in {} sec".format(self, time.time()-time0))
 
         if selected_branches:
-#             self.out_branches = [a for b in selected_branches for a in self.attrs if a.startswith(b)]
             self.out_branches = []
             for attr in self.attrs:
                 for name in selected_branches:
@@ -654,27 +672,30 @@ class RootDataReader(object):
     def read_chunk(self, nevts, set_branches=False, set_min_max=False):
         "Reach chunk of events and determine min/max values as well as load branch values"
         # read some portion of the data to determine branches
-        startTime = time.time()
+        start_time = time.time()
         if not self.gen:
             if self.out_branches:
-                self.gen = self.tree.iterate(branches=self.out_branches+self.identifier,
+                self.gen = self.tree.iterate(\
+                        branches=self.out_branches+self.identifier, \
                         entrysteps=nevts, keycache=self.cache)
             else:
-                self.gen = self.tree.iterate(entrysteps=nevts, keycache=self.cache)
+                self.gen = self.tree.iterate(\
+                        entrysteps=nevts, keycache=self.cache)
         self.branches = {} # start with fresh dict
         try:
             self.branches = next(self.gen) # python 3.X and 2.X
         except StopIteration:
             if self.out_branches:
-                self.gen = self.tree.iterate(branches=self.out_branches+self.identifier,
+                self.gen = self.tree.iterate(\
+                        branches=self.out_branches+self.identifier, \
                         entrysteps=nevts, keycache=self.cache)
             else:
                 self.gen = self.tree.iterate(entrysteps=nevts, keycache=self.cache)
             self.branches = next(self.gen) # python 3.X and 2.X
-        endTime = time.time()
+        end_time = time.time()
         self.idx += nevts
         if self.verbose:
-            performance(nevts, self.tree, self.branches, startTime, endTime)
+            performance(nevts, self.tree, self.branches, start_time, end_time)
         if set_branches:
             for key, val in self.branches.items():
                 self.minv[key], self.maxv[key] = min_max_arr(val)
@@ -722,22 +743,21 @@ class RootDataReader(object):
             swap0 = psutil.swap_memory()
 
         msg = ''
-        time0 = time.time()
 
         # if self.nevnts=0 we'll use 2x self.chunk_size to determine
         # the dimensions otherwise job waits too long to possibly scan
         # all events in a file which can be too large.
-        nrows = self.nrows
+        tot_rows = self.nrows
         if not self.nevts:
-            nrows = 2*self.chunk_size
+            tot_rows = 2*self.chunk_size
             if self.verbose:
-                print("# will use {} events to obtain dimensionality".format(nrows))
+                print("# will use {} events to obtain dimensionality".format(tot_rows))
 
         # scan all rows to find out largest jagged array dimension
         tot = 0
         set_branches = True
         set_min_max = True
-        for chunk in steps(nrows, self.chunk_size):
+        for chunk in steps(tot_rows, self.chunk_size):
             nevts = len(chunk) # chunk here contains event indexes
             tot += nevts
             self.read_chunk(nevts, set_branches=set_branches, set_min_max=set_min_max)
@@ -895,20 +915,21 @@ class RootDataReader(object):
                 self.idx, event, np.shape(xdf), (time.time()-time0)))
             if self.idx < 3:
                 # pick-up 3 branches for cross checking
-                if len(self.jagged_keys()):
-                    arrIdx = [random.randint(0, len(self.jagged_keys())-1) for _ in range(3)]
+                if self.jagged_keys():
+                    aidx = [random.randint(0, len(self.jagged_keys())-1) for _ in range(3)]
                     try:
-                        keys = [self.jagged_keys()[i] for i in arrIdx]
+                        keys = [self.jagged_keys()[i] for i in aidx]
                         for key in keys:
                             data = self.tree[key].array()
                             idx = self.attrs.index(key)
-                            startIdx, endIdx = self.find_branch_idx(key)
+                            start_idx, end_idx = self.find_branch_idx(key)
                             print("+ branch=%s, row %s, position %s:%s, min=%s max=%s" \
-                                    % (key, self.idx, startIdx, endIdx, self.minv[key], self.maxv[key]))
-                            print("+ xdf", xdf[startIdx:endIdx])
+                                    % (key, self.idx, start_idx, end_idx, \
+                                    self.minv[key], self.maxv[key]))
+                            print("+ xdf", xdf[start_idx:end_idx])
                             print(data)
                     except:
-                        print("arrIdx=%s, len(jagged_keys)=%s" % (arrIdx, len(self.jagged_keys())))
+                        print("aidx=%s, len(jagged_keys)=%s" % (aidx, len(self.jagged_keys())))
                         traceback.print_exc()
         return xdf, mask
 
@@ -946,7 +967,7 @@ class RootDataReader(object):
         while True:
             idx = random.randint(0, len(data)-1)
             values = data[idx]
-            if len(values):
+            if values:
                 if len(values) == 1:
                     val = values[0]
                 else:
@@ -1005,8 +1026,8 @@ def size_format(uinput):
     """
     try:
         num = float(uinput)
-    except Exception as exc:
-        print_exc(exc)
+    except ValueError:
+        traceback.print_exc()
         return "N/A"
     base = 1000. # CMS convention to use power of 10
     if  base == 1000.: # power of 10
@@ -1017,6 +1038,7 @@ def size_format(uinput):
         if  num < base:
             return "%3.1f%s" % (num, xxx)
         num /= base
+    return "N/A"
 
 def parse(reader, nevts, fout, hists):
     "Parse given number of events from given reader"
@@ -1027,7 +1049,7 @@ def parse(reader, nevts, fout, hists):
     farr = []
     jarr = []
     if reader.type == 'RootDataReader':
-        for idx in range(nevts):
+        for _ in range(nevts):
             xdf, _mask = reader.next()
             fdx = len(reader.flat_keys())
             flat = xdf[:fdx]
@@ -1045,10 +1067,11 @@ def parse(reader, nevts, fout, hists):
             count += 1
     if reader.type == 'root':
         print("avg(flat)=%s, avg(jagged)=%s, ratio=%s" \
-                % (size_format(np.mean(farr)), size_format(np.mean(jarr)), np.mean(farr)/np.mean(jarr)))
-    totTime = time.time()-time0
+                % (size_format(np.mean(farr)), \
+                size_format(np.mean(jarr)), np.mean(farr)/np.mean(jarr)))
+    tot_time = time.time()-time0
     print("Read %s evts, %s Hz, total time %s" % (
-        count, count/totTime, totTime))
+        count, count/tot_time, tot_time))
     if fout:
         reader.write_specs(fout)
     if hg and hists:
@@ -1066,9 +1089,9 @@ def write(reader, nevts, fout):
             xdf = reader.next()
             ostream.write(xdf.tobytes())
             count += 1
-        totTime = time.time()-time0
+        tot_time = time.time()-time0
         print("Read %s evts, %s Hz, total time %s" % (
-            count, count/totTime, totTime))
+            count, count/tot_time, tot_time))
 
 def xfile(fin, redirector='root://cms-xrd-global.cern.ch'):
     "Test if file is local or remote and setup proper prefix"
@@ -1080,7 +1103,7 @@ def xfile(fin, redirector='root://cms-xrd-global.cern.ch'):
 
 def main():
     "Main function"
-    optmgr  = OptionParser()
+    optmgr = OptionParser()
     opts = optmgr.parser.parse_args()
     fin = opts.fin
     fout = opts.fout
@@ -1106,9 +1129,9 @@ def main():
     identifier = [k.strip() for k in opts.identifier.split(',')]
     label = None
     if file_type(fin) == 'root':
-        reader = RootDataReader(fin, branch=branch, selected_branches=branches,
-                identifier=identifier, exclude_branches=exclude_branches, histograms=hists,
-                nan=nan, chunk_size=chunk_size,
+        reader = RootDataReader(fin, branch=branch, selected_branches=branches, \
+                identifier=identifier, exclude_branches=exclude_branches, \
+                histograms=hists, nan=nan, chunk_size=chunk_size, \
                 nevts=nevts, specs=specs, redirector=opts.redirector, verbose=verbose)
     elif file_type(fin) == 'csv':
         reader = CsvReader(fin, label, chunk_size, nevts, preproc, verbose)
