@@ -15,13 +15,13 @@ class TestCommand(Command):
     user_options = []
 
     def run(self):
-	pass
+        pass
 
     def initialize_options(self):
-	pass
+        pass
 
     def finalize_options(self):
-	pass
+        pass
 
 def datafiles(dir, pattern=None):
     """Return list of data files in provided relative dir"""
