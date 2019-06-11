@@ -55,7 +55,7 @@ def main():
         long_description     = 'MLaaS framework for HEP',
         packages             = ['MLaaS4HEP'],
         package_dir          = {'MLaaS4HEP': 'src/python/MLaaS4HEP'},
-        install_requires     = ['keras', 'numpy', 'pandas', 'uproot'],
+        install_requires     = ['keras', 'numpy', 'pandas', 'uproot', 'pyarrow'],
         scripts              = ['bin/%s'%s for s in os.listdir('bin')],
         url                  = 'https://github.com/dmwm/MLaaS4HEP',
         data_files           = [],
