@@ -1,12 +1,13 @@
+#-*- coding: utf-8 -*-
+#pylint: disable=R0913
+"""
+General set of utilities used by MLaaS4HEP framework.
+"""
 from __future__ import print_function, division, absolute_import
 
 # system modules
 import os
-import sys
 import time
-import json
-import random
-import argparse
 import traceback
 from itertools import takewhile, repeat
 
@@ -17,31 +18,27 @@ try:
 except ImportError:
     pass
 
-# numpy modules
-import numpy as np
-
 # uproot
 try:
-    import uproot
     try:
         # uproot verion 3.X
         from awkward import JaggedArray
-    except:
+    except ImportError:
         # uproot verion 2.X
         from uproot.interp.jagged import JaggedArray
 except ImportError:
     pass
 
 # numba
-try:
-    from numba import jit
-except ImportError:
-    def jit(f):
-        "Simple decorator which calls underlying function"
-        def new_f():
-            "Action function"
-            f()
-        return new_f
+# try:
+#     from numba import jit
+# except ImportError:
+#     def jit(f):
+#         "Simple decorator which calls underlying function"
+#         def new_f():
+#             "Action function"
+#             f()
+#         return new_f
 
 # histogrammar
 try:
@@ -84,9 +81,9 @@ def nrows(filename):
     Return total number of rows in given file, see
     https://stackoverflow.com/questions/845058/how-to-get-line-count-cheaply-in-python
     """
-    with fopen(filename, 'rb') as f:
-        bufgen = takewhile(lambda x: x, (f.read(1024*1024) for _ in repeat(None)))
-        return sum( buf.count(b'\n') for buf in bufgen )
+    with fopen(filename, 'rb') as fdsc:
+        bufgen = takewhile(lambda x: x, (fdsc.read(1024*1024) for _ in repeat(None)))
+        return sum([buf.count(b'\n') for buf in bufgen])
 
 def dump_histograms(hdict, hgkeys):
     "Helper function to dump histograms"
@@ -120,34 +117,33 @@ def mem_usage(vmem0, swap0, vmem1, swap1, msg=None):
     swap_used = (swap1.used-swap0.used)/mbyte
     print("VMEM used: %s (MB) SWAP used: %s (MB)" % (vmem_used, swap_used))
 
-def performance(nevts, tree, data, startTime, endTime, msg=""):
+def performance(nevts, tree, data, start_time, end_time, msg=""):
     "helper function to show performance metrics of data read from a given tree"
     try:
         nbytes = sum(x.content.nbytes + x.stops.nbytes \
                 if isinstance(x, JaggedArray) \
                 else x.nbytes for x in data.values())
         print("# %s entries, %s %sbranches, %s MB, %s sec, %s MB/sec, %s kHz" % \
-                (
-            nevts,
-            len(data),
-            msg,
-            nbytes / 1024**2,
-            endTime - startTime,
-            nbytes / 1024**2 / (endTime - startTime),
-            tree.numentries / (endTime - startTime) / 1000))
+                ( \
+            nevts, \
+            len(data), \
+            msg, \
+            nbytes / 1024**2, \
+            end_time - start_time, \
+            nbytes / 1024**2 / (end_time - start_time), \
+            tree.numentries / (end_time - start_time) / 1000))
     except Exception as exc:
         print(str(exc))
 
 def steps(total, size):
     "Return list of steps within total number given events"
-    step = int(float(total)/float(size))
     chunk = []
     for idx in range(total):
         if len(chunk) == size:
             yield chunk
             chunk = []
         chunk.append(idx)
-    if len(chunk) > 0:
+    if chunk:
         yield chunk
 
 
@@ -172,4 +168,4 @@ def file_type(fin):
     for ext in ['json', 'csv']:
         if fin.endswith(ext) or fin.endswith('%s.gz' % ext) or fin.endswith('%s.bz2' % ext):
             return ext
-
+    return None

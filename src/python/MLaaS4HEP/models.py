@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
-#pylint: disable=
+#pylint: disable=R0913,R0914
 """
 File       : models.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
-Description: this module defines handles based ML models for MLaaS4HEP workflow.
+Models module defines wrappers to train MLaaS4HEP workflows.
 
 User should provide a model implementation (so far in either in Keras or PyTorch),
 see ex_keras.py and ex_pytorch.py, respectively for examples.
@@ -12,11 +12,9 @@ see ex_keras.py and ex_pytorch.py, respectively for examples.
 The Trainer class defines a thin wrapper around user model and provides uniformat
 APIs to fit the model and yield predictions.
 """
+from __future__ import print_function, division, absolute_import
 
 # system modules
-import os
-import sys
-import traceback
 
 # numpy modules
 import numpy as np
@@ -27,7 +25,7 @@ from keras.utils import to_categorical
 # pytorch modules
 try:
     import torch
-except:
+except ImportError:
     torch = None
 
 # MLaaS4HEP modules
@@ -63,13 +61,13 @@ class Trainer(object):
         if self.cls_model.find('keras') != -1:
             self.model.fit(x_train, y_train, verbose=self.verbose, **kwds)
         elif self.cls_model.find('torch') != -1:
-            yhat = self.model(x_train).data.numpy()
+            self.model(x_train).data.numpy()
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def predict(self):
         "Predict API of the trainer"
-        raise NotImplemented
+        raise NotImplementedError
 
     def save(self, fout):
         "Save our model to given file"
@@ -78,7 +76,7 @@ class Trainer(object):
         elif self.cls_model.find('torch') != -1 and torch:
             torch.save(self.model, fout)
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
 def train_model(model, files, labels, preproc=None, params=None, specs=None, fout=None, dtype=None):
     """
@@ -102,13 +100,14 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     if file_type(files) == 'root':
         gen = RootDataGenerator(files, labels, params, specs)
     else:
-        gen = MetaDataGenerator(files, labels, params, specs, preproc, dtype)
+        gen = MetaDataGenerator(files, labels, params, preproc, dtype)
     epochs = params.get('epochs', 10)
     batch_size = params.get('batch_size', 50)
     shuffle = params.get('shuffle', True)
     split = params.get('split', 0.3)
     trainer = False
-    kwds = {'epochs':epochs, 'batch_size': batch_size, 'shuffle': shuffle, 'validation_split': split}
+    kwds = {'epochs':epochs, 'batch_size': batch_size,
+            'shuffle': shuffle, 'validation_split': split}
     for data in gen:
         if len(data) == 2:
             x_train = data[0]

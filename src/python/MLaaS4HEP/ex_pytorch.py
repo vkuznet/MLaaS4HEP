@@ -2,15 +2,18 @@
 Basic example of ML model implemented via pytorch framework
 """
 from MLaaS4HEP.jarray.pytorch import JaggedArrayLinear
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 def model(idim):
     "Simple PyTorch model for testing purposes"
-    model = torch.nn.Sequential(
+    if not torch:
+        raise Exception("Please install pytorch package")
+    ml_model = torch.nn.Sequential(
         JaggedArrayLinear(idim, 5),
         torch.nn.ReLU(),
         torch.nn.Linear(5, 1),
     )
-    return model
-
-
+    return ml_model
