@@ -677,6 +677,8 @@ class RootDataReader(object):
             performance(nevts, self.tree, self.branches, startTime, endTime)
         if set_branches:
             for key, val in self.branches.items():
+                if isinstance(key, bytes):
+                    key = key.decode()
                 self.minv[key], self.maxv[key] = min_max_arr(val)
                 if isinstance(val, JaggedArray):
                     self.jkeys.append(key)
@@ -684,6 +686,8 @@ class RootDataReader(object):
                     self.fkeys.append(key)
         if set_min_max:
             for key, val in self.branches.items():
+                if isinstance(key, bytes):
+                    key = key.decode()
                 minv, maxv = min_max_arr(val)
                 if minv < self.minv[key]:
                     self.minv[key] = minv
@@ -744,6 +748,8 @@ class RootDataReader(object):
             set_branches = False # we do it once
             for key in self.jkeys:
                 if key not in self.jdim:
+                    if isinstance(key, bytes):
+                        key = key.decode()
                     self.jdim[key] = 0
                 dim = dim_jarr(self.fetch_data(key))
                 if dim > self.jdim.get(key, 0):
@@ -760,6 +766,8 @@ class RootDataReader(object):
         # initialize all nan values (zeros) in normalize phase-space
         # this should be done after we get all min/max values
         for key in self.branches.keys():
+            if isinstance(key, bytes):
+                key = key.decode()
             self.nans[key] = self.normalize(key, 0)
 
         # reset internal indexes since we done with first pass reading
@@ -800,7 +808,7 @@ class RootDataReader(object):
         out['jkeys'] = self.jagged_keys()
         out['nans'] = self.nans
         if self.verbose:
-            print("write specs {}".format(fout))
+            print("write {}".format(fout))
         with open(fout, 'w') as ostream:
             ostream.write(json.dumps(out))
 
