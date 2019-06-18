@@ -120,15 +120,18 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         print("x_train chunk of {} shape".format(np.shape(x_train)))
         print("y_train chunk of {} shape".format(np.shape(y_train)))
-        # convert y_train to categorical array
-        y_train = to_categorical(y_train)
         print("y_train chunk of {} shape".format(np.shape(y_train)))
         if np.shape(x_train)[0] == 0:
             print("received empty x_train chunk")
             break
         if not trainer:
             idim = np.shape(x_train)[-1] # read number of attributes we have
-            trainer = Trainer(model(idim), verbose=params.get('verbose', 0))
+            model = model(idim)
+            print("model", model, "loss function", model.loss)
+            trainer = Trainer(model, verbose=params.get('verbose', 0))
+        # convert y_train to categorical array
+        if model.loss == 'categorical_crossentropy':
+            y_train = to_categorical(y_train)
 
         trainer.fit(x_train, y_train, **kwds)
     if fout and hasattr(trainer, 'save'):
