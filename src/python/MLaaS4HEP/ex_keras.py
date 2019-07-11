@@ -10,7 +10,7 @@ def model(idim):
     ml_model = Sequential([
         Dense(32, input_shape=(idim,)),
         Activation('relu'),
-        Dense(1),
+        Dense(2),
         Activation('softmax'),
     ])
     ml_model.compile(optimizer='adam', \
