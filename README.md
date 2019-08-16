@@ -171,6 +171,9 @@ hdfs:///path/file2.json.gz
 workflow --files=files.txt --labels=labels.txt --model=ex_keras.py --preproc=ex_preproc.py --fout=model.pb
 ```
 
+We provide more comprehensive example over
+[here](doc/hdfs-example.md)
+
 ### HEP resnet
 We provided full code called `hep_resnet.py` as a basic model based on
 [ResNet](https://github.com/raghakot/keras-resnet) implementation.
