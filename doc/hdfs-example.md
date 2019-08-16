@@ -3,12 +3,11 @@ Let's say our objective is to process rucio data on HDFS and build ML model to
 predict activity based on some set of attributes. In our example we'll
 use MLaas4HEP package and Rucio data on HDFS.
 
-Here we provide all steps (from setup to ML training) that you can
-use as an example for future use-cases:
+Here we provide all steps (from setup to ML training) that you can use as an
+example for future use-cases. For simplicity, we'll use anaconda as an example
+to bring all dependencies but it is not a requirement, e.g. there are other
+methods to install all dependencies.
 
-#### setup proper environment
-Here we'll use anaconda as an example, but it is not a requirement, e.g. there
-are other methods to install all dependencies).
 ```
 # download anaconda shell script and install it on your node
 
