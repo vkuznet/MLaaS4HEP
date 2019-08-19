@@ -32,7 +32,7 @@ And, create a project (I'll use rucio as an example)
 mkdir rucio
 # copy example keras model and preprocessing code
 cp src/python/MLaaS4HEP/ex_keras.py rucio/rucio_model.py
-cp src/python/MLaaS4HEP/ex_preproc.py rucio/rucio_preroc.py
+cp src/python/MLaaS4HEP/ex_preproc.py rucio/rucio_preproc.py
 cd rucio
 ```
 
