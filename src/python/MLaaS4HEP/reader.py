@@ -192,9 +192,9 @@ class FileReader(object):
                 self.istream = fopen(fin, 'r')
         if self.verbose:
             if self.reader:
-                print('init {} with {}'.format(self.__class__.__name__, self.reader))
+                print('init {} with {}'.format(self.type, self.reader))
             else:
-                print('init {}'.format(self.__class__.__name__))
+                print('init {}'.format(self.type))
 
     def info(self):
         "Provide basic info about class attributes"
