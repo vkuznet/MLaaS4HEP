@@ -14,6 +14,6 @@ def model(idim):
         Activation('softmax'),
     ])
     ml_model.compile(optimizer='adam', \
-                  loss='categorical_crossentropy', \ # use loss='binary_crossentropy' if you have 2 output classes
+                  loss='categorical_crossentropy',  # use loss='binary_crossentropy' if you have 2 output classes
                   metrics=['accuracy'])
     return ml_model
