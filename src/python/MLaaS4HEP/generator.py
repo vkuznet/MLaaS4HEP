@@ -187,6 +187,7 @@ class RootDataGenerator(object):
         batch_size = params.get('batch_size', 256)
         verbose = params.get('verbose', 0)
         branch = params.get('branch', 'Events')
+        identifier = params.get('identifier', [])
         branches = params.get('selected_branches', [])
         chunk_size = params.get('chunk_size', 1000)
         exclude_branches = params.get('exclude_branches', [])
@@ -242,7 +243,7 @@ class RootDataGenerator(object):
                         print("loading specs {}".format(sname))
                     specs = json.load(open(sname))
 
-            reader = RootDataReader(fname, branch=branch, \
+            reader = RootDataReader(fname, branch=branch, identifier=identifier,\
                     selected_branches=branches, exclude_branches=exclude_branches, \
                     nan=nan, chunk_size=chunk_size, nevts=0, specs=specs, \
                     redirector=redirector, verbose=verbose)
