@@ -245,7 +245,7 @@ class RootDataGenerator(object):
 
             reader = RootDataReader(fname, branch=branch, identifier=identifier,\
                     selected_branches=branches, exclude_branches=exclude_branches, \
-                    nan=nan, chunk_size=chunk_size, nevts=0, specs=specs, \
+                    nan=nan, chunk_size=chunk_size, nevts=self.evts, specs=specs, \
                     redirector=redirector, verbose=verbose)
 
             if not os.path.isfile(sname):
