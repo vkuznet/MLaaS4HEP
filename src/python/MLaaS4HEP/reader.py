@@ -157,7 +157,7 @@ def min_max_arr(arr):
             minv = 1e15
             maxv = -1e15
             for item in arr:
-                if not item:
+                if not item.any():
                     continue
                 if np.min(item) < minv:
                     minv = np.min(item)
