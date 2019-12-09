@@ -274,18 +274,19 @@ class RootDataGenerator(object):
 
     def next(self):
         "Return next batch of events in form of data and mask vectors"
+        if self.stop_idx > self.nevts:
+            # we reached the limit of the reader
+            self.start_idx = 0
+            self.stop_idx = self.chunk_size
+            raise StopIteration
+        if self.shuffle:
+            idx = random.randint(0, len(self.files)-1)
+            self.current_file = self.files[idx]
         msg = "\nread chunk [{}:{}] from {} label {}"\
                 .format(self.start_idx, self.stop_idx, self.current_file, \
                 self.file_label_dict[self.current_file])
         gen = self.read_data(self.start_idx, self.stop_idx)
         # advance start and stop indecies
-        self.start_idx = self.stop_idx
-        self.stop_idx = self.start_idx+self.chunk_size
-        if self.start_idx > self.nevts or self.start_idx > self.reader[self.current_file].nrows:
-            # we reached the limit of the reader
-            self.start_idx = 0
-            self.stop_idx = self.chunk_size
-            raise StopIteration
         if self.verbose:
             print(msg)
         data = []
@@ -308,21 +309,23 @@ class RootDataGenerator(object):
     def read_data(self, start=0, stop=100):
         "Helper function to read ROOT data via uproot reader"
         # if we exceed number of events in a file we discard it
-        if self.nevts < self.reader_counter[self.current_file]:
+        if self.reader_counter[self.current_file] + self.chunk_size > self.reader[self.current_file].nrows:
             if self.verbose:
                 msg = "# discard {} since we read {} out of {} events"\
                         .format(self.current_file, \
-                        self.reader_counter[self.current_file], self.nevts)
+                        self.reader_counter[self.current_file], self.reader[self.current_file].nrows)
                 print(msg)
             self.files.remove(self.current_file)
             if self.files:
                 self.current_file = self.files[0]
+                if self.verbose:
+                    msg = "\nread chunk [{}:{}] from {} label {}"\
+                        .format(self.start_idx, self.stop_idx, self.current_file, \
+                        self.file_label_dict[self.current_file])
+                    print(msg)
             else:
                 print("# no more files to read from")
                 raise StopIteration
-        if self.shuffle:
-            idx = random.randint(0, len(self.files)-1)
-            self.current_file = self.files[idx]
         current_file = self.current_file
         reader = self.reader[current_file]
         if stop == -1:
@@ -334,9 +337,11 @@ class RootDataGenerator(object):
             for _ in range(start, stop):
                 xdf, mask = reader.next()
                 yield (xdf, mask)
-                read_evts = stop-start
+            read_evts = stop-start
         # update how many events we read from current file
         self.reader_counter[self.current_file] += read_evts
+        self.start_idx = stop
+        self.stop_idx = self.start_idx + self.chunk_size
         if self.verbose:
             nevts = self.reader_counter[self.current_file]
             msg = "\ntotal read {} evts from {}".format(nevts, current_file)
