@@ -762,8 +762,12 @@ class RootDataReader(object):
         set_branches = True
         set_min_max = True
         for chunk in steps(tot_rows, self.chunk_size):
-            nevts = len(chunk) # chunk here contains event indexes
-            tot += nevts
+            if tot + self.chunk_size > self.nevts:
+                nevts = self.nevts - tot
+                tot = self.nevts
+            else:
+                nevts = len(chunk) # chunk here contains event indexes
+                tot += nevts
             self.read_chunk(nevts, set_branches=set_branches, set_min_max=set_min_max)
             set_branches = False # we do it once
             for key in self.jkeys:
@@ -774,7 +778,7 @@ class RootDataReader(object):
                 dim = dim_jarr(self.fetch_data(key))
                 if dim > self.jdim.get(key, 0):
                     self.jdim[key] = dim
-            if self.nevts > 0 and tot > self.nevts:
+            if self.nevts > 0 and tot >= self.nevts:
                 break
 
         # if we've been asked to read all or zero events we determine
