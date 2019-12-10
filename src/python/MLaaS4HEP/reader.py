@@ -764,7 +764,7 @@ class RootDataReader(object):
         for chunk in steps(tot_rows, self.chunk_size):
             if tot + self.chunk_size > self.nevts:
                 nevts = self.nevts - tot
-                tot = self.nrows
+                tot = self.nevts
             else:
                 nevts = len(chunk) # chunk here contains event indexes
                 tot += nevts
