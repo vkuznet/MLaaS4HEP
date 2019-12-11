@@ -253,14 +253,11 @@ class RootDataGenerator(object):
                     print("writing specs {}".format(sname))
                 reader.write_specs(sname)
 
-            if not specs:
-                reader.load_specs(sname)
-
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
+            specs={}
 
         self.current_file = self.files[0]
-
         print("init RootDataGenerator in {} sec".format(time.time()-time0))
 
     @property
@@ -283,7 +280,7 @@ class RootDataGenerator(object):
             idx = random.randint(0, len(self.files)-1)
             self.current_file = self.files[idx]
         msg = "\nread chunk [{}:{}] from {} label {}"\
-                .format(self.start_idx, self.stop_idx, self.current_file, \
+                .format(self.start_idx, self.stop_idx-1, self.current_file, \
                 self.file_label_dict[self.current_file])
         gen = self.read_data(self.start_idx, self.stop_idx)
         # advance start and stop indecies
@@ -320,7 +317,7 @@ class RootDataGenerator(object):
                 self.current_file = self.files[0]
                 if self.verbose:
                     msg = "\nread chunk [{}:{}] from {} label {}"\
-                        .format(self.start_idx, self.stop_idx, self.current_file, \
+                        .format(self.start_idx, self.stop_idx-1, self.current_file, \
                         self.file_label_dict[self.current_file])
                     print(msg)
             else:
