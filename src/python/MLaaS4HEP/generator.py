@@ -302,7 +302,8 @@ class RootDataGenerator(object):
                 if self.verbose:
                     print("write {}".format(self.gname))
                 with open(self.gname, 'w') as ostream:
-                    out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv, 'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
+                    out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
+                        'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
                     ostream.write(json.dumps(out))
 
 
