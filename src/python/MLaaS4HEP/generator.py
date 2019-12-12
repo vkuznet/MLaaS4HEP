@@ -273,39 +273,6 @@ class RootDataGenerator(object):
         self.current_file = self.files[0]
         print("init RootDataGenerator in {} sec".format(time.time()-time0))
 
-    def global_specs (self, fname, reader):
-        if fname == self.files[0]:
-            self.jdim = reader.jdim
-            self.minv = reader.minv
-            self.maxv = reader.maxv
-            self.fkeys = reader.fkeys
-            self.jkeys = reader.jkeys
-
-        if fname != self.files[0]:
-            for key in self.maxv.keys():
-                if isinstance(key, bytes):
-                    key = key.decode()
-                if reader.maxv[key] > self.maxv[key]:
-                    self.maxv[key] = reader.maxv[key]
-                if reader.minv[key] < self.minv[key]:
-                    self.minv[key] = reader.minv[key]
-                if key in self.jkeys:
-                    if reader.jdim[key] > self.jdim[key]:
-                        self.jdim[key] = reader.jdim[key]
-            if fname == self.files[-1]:
-                for key in self.maxv.keys():
-                    if self.minv[key] == self.maxv[key]:
-                        self.nans[key] = self.maxv[key]
-                    else:
-                        self.nans[key] = (0-self.minv[key])/(self.maxv[key]-self.minv[key])
-
-                if self.verbose:
-                    print("write {}".format(self.gname))
-                with open(self.gname, 'w') as ostream:
-                    out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
-                        'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
-                    ostream.write(json.dumps(out))
-
 
     @property
     def nevts(self):
@@ -390,3 +357,36 @@ class RootDataGenerator(object):
             nevts = self.reader_counter[self.current_file]
             msg = "\ntotal read {} evts from {}".format(nevts, current_file)
             print(msg)
+
+    def global_specs (self, fname, reader):
+        if fname == self.files[0]:
+            self.jdim = reader.jdim
+            self.minv = reader.minv
+            self.maxv = reader.maxv
+            self.fkeys = reader.fkeys
+            self.jkeys = reader.jkeys
+
+        if fname != self.files[0]:
+            for key in self.maxv.keys():
+                if isinstance(key, bytes):
+                    key = key.decode()
+                if reader.maxv[key] > self.maxv[key]:
+                    self.maxv[key] = reader.maxv[key]
+                if reader.minv[key] < self.minv[key]:
+                    self.minv[key] = reader.minv[key]
+                if key in self.jkeys:
+                    if reader.jdim[key] > self.jdim[key]:
+                        self.jdim[key] = reader.jdim[key]
+            if fname == self.files[-1]:
+                for key in self.maxv.keys():
+                    if self.minv[key] == self.maxv[key]:
+                        self.nans[key] = self.maxv[key]
+                    else:
+                        self.nans[key] = (0-self.minv[key])/(self.maxv[key]-self.minv[key])
+
+                if self.verbose:
+                    print("write {}".format(self.gname))
+                with open(self.gname, 'w') as ostream:
+                    out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
+                        'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
+                    ostream.write(json.dumps(out))
