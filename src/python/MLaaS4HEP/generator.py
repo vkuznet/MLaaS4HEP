@@ -253,6 +253,9 @@ class RootDataGenerator(object):
                     print("writing specs {}".format(sname))
                 reader.write_specs(sname)
 
+            if not specs:
+                reader.load_specs(sname)
+
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
             specs={}
@@ -283,7 +286,6 @@ class RootDataGenerator(object):
                 .format(self.start_idx, self.stop_idx-1, self.current_file, \
                 self.file_label_dict[self.current_file])
         gen = self.read_data(self.start_idx, self.stop_idx)
-        # advance start and stop indecies
         if self.verbose:
             print(msg)
         data = []
@@ -337,6 +339,7 @@ class RootDataGenerator(object):
             read_evts = stop-start
         # update how many events we read from current file
         self.reader_counter[self.current_file] += read_evts
+        # advance start and stop indecies
         self.start_idx = stop
         self.stop_idx = self.start_idx + self.chunk_size
         if self.verbose:
