@@ -258,9 +258,9 @@ class RootDataGenerator(object):
 
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
+            specs={}
 
         self.current_file = self.files[0]
-
         print("init RootDataGenerator in {} sec".format(time.time()-time0))
 
     @property
@@ -283,10 +283,9 @@ class RootDataGenerator(object):
             idx = random.randint(0, len(self.files)-1)
             self.current_file = self.files[idx]
         msg = "\nread chunk [{}:{}] from {} label {}"\
-                .format(self.start_idx, self.stop_idx, self.current_file, \
+                .format(self.start_idx, self.stop_idx-1, self.current_file, \
                 self.file_label_dict[self.current_file])
         gen = self.read_data(self.start_idx, self.stop_idx)
-        # advance start and stop indecies
         if self.verbose:
             print(msg)
         data = []
@@ -320,7 +319,7 @@ class RootDataGenerator(object):
                 self.current_file = self.files[0]
                 if self.verbose:
                     msg = "\nread chunk [{}:{}] from {} label {}"\
-                        .format(self.start_idx, self.stop_idx, self.current_file, \
+                        .format(self.start_idx, self.stop_idx-1, self.current_file, \
                         self.file_label_dict[self.current_file])
                     print(msg)
             else:
@@ -340,6 +339,7 @@ class RootDataGenerator(object):
             read_evts = stop-start
         # update how many events we read from current file
         self.reader_counter[self.current_file] += read_evts
+        # advance start and stop indecies
         self.start_idx = stop
         self.stop_idx = self.start_idx + self.chunk_size
         if self.verbose:

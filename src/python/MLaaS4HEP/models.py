@@ -120,7 +120,6 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         print("x_train chunk of {} shape".format(np.shape(x_train)))
         print("y_train chunk of {} shape".format(np.shape(y_train)))
-        print("y_train chunk of {} shape".format(np.shape(y_train)))
         if np.shape(x_train)[0] == 0:
             print("received empty x_train chunk")
             break
