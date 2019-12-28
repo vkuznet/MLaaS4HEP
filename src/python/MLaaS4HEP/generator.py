@@ -237,7 +237,7 @@ class RootDataGenerator(object):
         self.fkeys = []
         self.jkeys = []
         self.nans = {}
-        self.gname = "specs-global.json"
+        self.gname = "global-specs.json"
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
@@ -245,10 +245,10 @@ class RootDataGenerator(object):
             fbase = fname.split('/')[-1].replace('.root', '')
             sname = 'specs-{}.json'.format(fbase)
             if not specs:
-                if os.path.isfile(sname):
+                if os.path.isfile(self.gname):
                     if verbose:
-                        print("loading specs {}".format(sname))
-                    specs = json.load(open(sname))
+                        print("loading specs {}".format(self.gname))
+                    specs = json.load(open(self.gname))
 
             reader = RootDataReader(fname, branch=branch, identifier=identifier,\
                     selected_branches=branches, exclude_branches=exclude_branches, \
@@ -268,7 +268,6 @@ class RootDataGenerator(object):
 
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
-            specs={}
 
         self.current_file = self.files[0]
         print("init RootDataGenerator in {} sec".format(time.time()-time0))
@@ -338,6 +337,7 @@ class RootDataGenerator(object):
                 raise StopIteration
         current_file = self.current_file
         reader = self.reader[current_file]
+        reader.load_specs(self.gname)
         if stop == -1:
             for _ in range(reader.nrows):
                 xdf, mask = reader.next()
@@ -359,6 +359,7 @@ class RootDataGenerator(object):
             print(msg)
 
     def global_specs (self, fname, reader):
+        "Function to build specs for the whole set of root files"
         if fname == self.files[0]:
             self.jdim = reader.jdim
             self.minv = reader.minv
@@ -366,10 +367,8 @@ class RootDataGenerator(object):
             self.fkeys = reader.fkeys
             self.jkeys = reader.jkeys
 
-        if fname != self.files[0]:
+        else:
             for key in self.maxv.keys():
-                if isinstance(key, bytes):
-                    key = key.decode()
                 if reader.maxv[key] > self.maxv[key]:
                     self.maxv[key] = reader.maxv[key]
                 if reader.minv[key] < self.minv[key]:

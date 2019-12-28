@@ -991,6 +991,8 @@ class RootDataReader(object):
 
     def normalize(self, key, val):
         "Normalize given value to 0-1 range according to min/max values"
+        if isinstance(key, bytes):
+            key = key.decode()
         # in case if our value is np.nan we'll assign nan value given to class
         if np.isnan(val):
             return self.nan
