@@ -285,10 +285,13 @@ class RootDataGenerator(object):
     def next(self):
         "Return next batch of events in form of data and mask vectors"
         if self.stop_idx > self.nevts:
+            if self.stop_idx - self.nevts < self.chunk_size:
+                self.stop_idx = self.nevts
             # we reached the limit of the reader
-            self.start_idx = 0
-            self.stop_idx = self.chunk_size
-            raise StopIteration
+            else:
+                self.start_idx = 0
+                self.stop_idx = self.chunk_size
+                raise StopIteration
         if self.shuffle:
             idx = random.randint(0, len(self.files)-1)
             self.current_file = self.files[idx]
