@@ -284,23 +284,10 @@ class RootDataGenerator(object):
 
     def next(self):
         "Return next batch of events in form of data and mask vectors"
-        if self.stop_idx > self.nevts:
-            if self.stop_idx - self.nevts < self.chunk_size:
-                self.stop_idx = self.nevts
-            # we reached the limit of the reader
-            else:
-                self.start_idx = 0
-                self.stop_idx = self.chunk_size
-                raise StopIteration
         if self.shuffle:
             idx = random.randint(0, len(self.files)-1)
             self.current_file = self.files[idx]
-        msg = "\nread chunk [{}:{}] from {} label {}"\
-                .format(self.start_idx, self.stop_idx-1, self.current_file, \
-                self.file_label_dict[self.current_file])
         gen = self.read_data(self.start_idx, self.stop_idx)
-        if self.verbose:
-            print(msg)
         data = []
         mask = []
         for (xdf, mdf) in gen:
@@ -318,26 +305,48 @@ class RootDataGenerator(object):
         "Provide generator capabilities to the class"
         return self.next()
 
-    def read_data(self, start=0, stop=100):
-        "Helper function to read ROOT data via uproot reader"
-        # if we exceed number of events in a file we discard it
-        if self.reader_counter[self.current_file] + self.chunk_size > self.reader[self.current_file].nrows:
+    def check_file(self):
+        "This function allows to set self.start_idx, self.stop_idx, and to change the file to be read if necessary"
+        if self.evts != -1 and self.stop_idx > self.evts:
+            if self.stop_idx - self.evts < self.chunk_size:
+                self.stop_idx = self.evts
+                return False
+            # we finished reading all the self.evts events
+            else:
+                self.start_idx = 0
+                self.stop_idx = self.chunk_size
+                print("# we finished reading all the self.evts events")
+                raise StopIteration
+        if self.reader_counter[self.current_file] == self.reader[self.current_file].nrows:
+            # if we exceed number of events in a file we discard it
             if self.verbose:
-                msg = "# discard {} since we read {} out of {} events"\
+                msg = "\n# discard {} since we read {} out of {} events"\
                         .format(self.current_file, \
                         self.reader_counter[self.current_file], self.reader[self.current_file].nrows)
                 print(msg)
             self.files.remove(self.current_file)
             if self.files:
                 self.current_file = self.files[0]
-                if self.verbose:
-                    msg = "\nread chunk [{}:{}] from {} label {}"\
-                        .format(self.start_idx, self.stop_idx-1, self.current_file, \
-                        self.file_label_dict[self.current_file])
-                    print(msg)
+                self.stop_idx = self.start_idx + self.chunk_size
+                return True
             else:
-                print("# no more files to read from")
+                print("# no more files to read")
                 raise StopIteration
+        if self.reader_counter[self.current_file] + self.chunk_size > self.reader[self.current_file].nrows:
+            self.stop_idx = self.start_idx + self.reader[self.current_file].nrows - self.reader_counter[self.current_file]
+            return False
+        else:
+            return False
+
+    def read_data(self, start=0, stop=100):
+        "Helper function to read ROOT data via uproot reader"
+        while self.check_file():
+            pass
+        msg = "\nread chunk [{}:{}] from {} label {}"\
+                .format(self.start_idx, self.stop_idx-1, self.current_file, \
+                self.file_label_dict[self.current_file])
+        if self.verbose:
+            print(msg)
         current_file = self.current_file
         reader = self.reader[current_file]
         reader.load_specs(self.gname)
@@ -347,14 +356,14 @@ class RootDataGenerator(object):
                 yield (xdf, mask)
             read_evts = reader.nrows
         else:
-            for _ in range(start, stop):
+            for _ in range(self.start_idx, self.stop_idx):
                 xdf, mask = reader.next()
                 yield (xdf, mask)
-            read_evts = stop-start
+            read_evts = self.stop_idx-self.start_idx
         # update how many events we read from current file
         self.reader_counter[self.current_file] += read_evts
         # advance start and stop indecies
-        self.start_idx = stop
+        self.start_idx = self.stop_idx
         self.stop_idx = self.start_idx + self.chunk_size
         if self.verbose:
             nevts = self.reader_counter[self.current_file]
@@ -386,9 +395,10 @@ class RootDataGenerator(object):
                     else:
                         self.nans[key] = (0-self.minv[key])/(self.maxv[key]-self.minv[key])
 
-                if self.verbose:
-                    print("write {}".format(self.gname))
-                with open(self.gname, 'w') as ostream:
-                    out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
-                        'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
-                    ostream.write(json.dumps(out))
+                if not os.path.isfile(self.gname):
+                    if self.verbose:
+                        print("write {}".format(self.gname))
+                    with open(self.gname, 'w') as ostream:
+                        out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
+                            'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
+                        ostream.write(json.dumps(out))
