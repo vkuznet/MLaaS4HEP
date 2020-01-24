@@ -573,7 +573,7 @@ class RootDataReader(object):
         self.identifier = identifier if identifier else ['run', 'event', 'luminosityBlock']
         self.tree = self.istream[branch]
         self.nrows = self.tree.numentries
-        self.nevts = nevts
+        self.nevts = nevts if nevts != -1 else self.nrows
         self.idx = -1
         self.chunk_idx = 0
         self.chunk_size = chunk_size if chunk_size < self.nrows else self.nrows
@@ -725,7 +725,7 @@ class RootDataReader(object):
 
     def init(self):
         "Initialize class data members by scaning ROOT tree"
-        if self.jdim and self.minv and self.maxv:
+        if self.minv and self.maxv:
             self.attrs = sorted(self.flat_keys()) + sorted(self.jagged_keys())
             self.shape = len(self.flat_keys()) + sum(self.jdim.values())
             msg = "+++ first pass: %s events, (%s-flat, %s-jagged) branches, %s attrs" \

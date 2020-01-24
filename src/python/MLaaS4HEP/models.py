@@ -109,6 +109,9 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     kwds = {'epochs':epochs, 'batch_size': batch_size,
             'shuffle': shuffle, 'validation_split': split}
     for data in gen:
+        if np.shape(data[0])[0] == 0:
+            print("received empty x_train chunk")
+            break
         if len(data) == 2:
             x_train = data[0]
             y_train = data[1]
@@ -120,9 +123,6 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         print("x_train chunk of {} shape".format(np.shape(x_train)))
         print("y_train chunk of {} shape".format(np.shape(y_train)))
-        if np.shape(x_train)[0] == 0:
-            print("received empty x_train chunk")
-            break
         if not trainer:
             idim = np.shape(x_train)[-1] # read number of attributes we have
             model = model(idim)
