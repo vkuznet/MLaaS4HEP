@@ -369,6 +369,15 @@ class RootDataGenerator(object):
             nevts = self.reader_counter[self.current_file]
             msg = "\ntotal read {} evts from {}".format(nevts, current_file)
             print(msg)
+    
+    def write_global_specs(self):
+        if not os.path.isfile(self.gname):
+            if self.verbose:
+                print("write {}".format(self.gname))
+            with open(self.gname, 'w') as ostream:
+                out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
+                    'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
+                ostream.write(json.dumps(out))
 
     def global_specs (self, fname, reader):
         "Function to build specs for the whole set of root files"
@@ -378,6 +387,8 @@ class RootDataGenerator(object):
             self.maxv = reader.maxv
             self.fkeys = reader.fkeys
             self.jkeys = reader.jkeys
+            if len(self.files) == 1:
+                self.write_global_specs()
 
         else:
             for key in self.maxv.keys():
@@ -394,11 +405,4 @@ class RootDataGenerator(object):
                         self.nans[key] = self.maxv[key]
                     else:
                         self.nans[key] = (0-self.minv[key])/(self.maxv[key]-self.minv[key])
-
-                if not os.path.isfile(self.gname):
-                    if self.verbose:
-                        print("write {}".format(self.gname))
-                    with open(self.gname, 'w') as ostream:
-                        out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
-                            'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
-                        ostream.write(json.dumps(out))
+                self.write_global_specs()
