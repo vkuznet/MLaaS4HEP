@@ -131,7 +131,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         # convert y_train to categorical array
         if model.loss == 'categorical_crossentropy':
             y_train = to_categorical(y_train)
-
         trainer.fit(x_train, y_train, **kwds)
+
     if fout and hasattr(trainer, 'save'):
         trainer.save(fout)

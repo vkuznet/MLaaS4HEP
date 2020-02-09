@@ -203,12 +203,12 @@ class RootDataGenerator(object):
         else:
             raise Exception("Unsupported data-type '%s' for fin parameter" % type(fin))
         if isinstance(labels, str):
-            self.labels = [labels]
+            self.labels = labels
         elif isinstance(labels, list):
             self.labels = labels
+            self.file_label_dict = dict(zip(self.files, self.labels))
         else:
             raise Exception("Unsupported data-type '%s' for labels parameter" % type(labels))
-        self.file_label_dict = dict(zip(self.files, self.labels))
 
         self.reader = {} # global reader will handle all files readers
         self.reader_counter = {} # reader counter keeps track of nevts read by readers
@@ -250,7 +250,7 @@ class RootDataGenerator(object):
                         print("loading specs {}".format(self.gname))
                     specs = json.load(open(self.gname))
 
-            reader = RootDataReader(fname, branch=branch, identifier=identifier,\
+            reader = RootDataReader(fname, branch=branch, identifier=identifier, label=self.labels,\
                     selected_branches=branches, exclude_branches=exclude_branches, \
                     nan=nan, chunk_size=chunk_size, nevts=self.evts, specs=specs, \
                     redirector=redirector, verbose=verbose)
@@ -290,12 +290,24 @@ class RootDataGenerator(object):
         gen = self.read_data(self.start_idx, self.stop_idx)
         data = []
         mask = []
-        for (xdf, mdf) in gen:
+        label_list = []
+        index_label = 0
+        for (xdf, mdf, idx_label) in gen:
             data.append(xdf)
             mask.append(mdf)
-        label = self.file_label_dict[self.current_file]
+            index_label = idx_label
+        if isinstance(self.labels, list):
+            label = self.file_label_dict[self.current_file]
+            data = np.array(data)
+            mask = np.array(mask)
+        else:
+            if data:
+                label_list.append(np.array(data)[:,index_label])
+                data = np.delete(np.array(data),index_label,1)
+                mask = np.delete(np.array(mask),index_label,1)
+            label = label_list
         labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
-        return np.array(data), np.array(mask), labels
+        return data, mask, labels
 
     def __iter__(self):
         "Provide iterator capabilities to the class"
@@ -342,9 +354,8 @@ class RootDataGenerator(object):
         "Helper function to read ROOT data via uproot reader"
         while self.check_file():
             pass
-        msg = "\nread chunk [{}:{}] from {} label {}"\
-                .format(self.start_idx, self.stop_idx-1, self.current_file, \
-                self.file_label_dict[self.current_file])
+        msg = "\nread chunk [{}:{}] from {}"\
+                .format(self.start_idx, self.stop_idx-1, self.current_file)
         if self.verbose:
             print(msg)
         current_file = self.current_file
@@ -352,13 +363,13 @@ class RootDataGenerator(object):
         reader.load_specs(self.gname)
         if stop == -1:
             for _ in range(reader.nrows):
-                xdf, mask = reader.next()
-                yield (xdf, mask)
+                xdf, mask, idx_label = reader.next()
+                yield (xdf, mask, idx_label)
             read_evts = reader.nrows
         else:
             for _ in range(self.start_idx, self.stop_idx):
-                xdf, mask = reader.next()
-                yield (xdf, mask)
+                xdf, mask, idx_label = reader.next()
+                yield (xdf, mask, idx_label)
             read_evts = self.stop_idx-self.start_idx
         # update how many events we read from current file
         self.reader_counter[self.current_file] += read_evts
