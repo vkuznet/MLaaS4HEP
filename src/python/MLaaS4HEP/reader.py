@@ -895,7 +895,7 @@ class RootDataReader(object):
             if key.decode() != self.label:
                 xdf[idx] = self.normalize(key, rec[key])
             else:
-                idx_label=idx
+                idx_label = idx
                 xdf[idx] = rec[key]
             if hg and self.hists:
                 self.hdict['%s_orig' % key].fill(rec[key])
