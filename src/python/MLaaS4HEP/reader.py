@@ -847,7 +847,7 @@ class RootDataReader(object):
             shape += self.jdim[key]
         xdf = np.ndarray(shape=(shape,))
         mask = np.ndarray(shape=(shape,), dtype=np.int)
-        idx_label=0
+        idx_label = 0
 
         # read new chunk of records if necessary
         if not self.idx % self.chunk_size:
