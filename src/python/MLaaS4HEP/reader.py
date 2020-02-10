@@ -558,7 +558,7 @@ class RootDataReader(object):
     ROOT file into flat DataFrame format.
     """
     def __init__(self, fin, branch='Events', selected_branches=None, \
-            exclude_branches=None, identifier=None, \
+            exclude_branches=None, identifier=None, label=None, \
             chunk_size=1000, nevts=-1, specs=None, nan=np.nan, histograms=False, \
             redirector='root://cms-xrd-global.cern.ch', verbose=0):
         self.type = self.__class__.__name__
@@ -574,6 +574,7 @@ class RootDataReader(object):
         self.tree = self.istream[branch]
         self.nrows = self.tree.numentries
         self.nevts = nevts if nevts != -1 else self.nrows
+        self.label = label
         self.idx = -1
         self.chunk_idx = 0
         self.chunk_size = chunk_size if chunk_size < self.nrows else self.nrows
@@ -846,6 +847,7 @@ class RootDataReader(object):
             shape += self.jdim[key]
         xdf = np.ndarray(shape=(shape,))
         mask = np.ndarray(shape=(shape,), dtype=np.int)
+        idx_label = 0
 
         # read new chunk of records if necessary
         if not self.idx % self.chunk_size:
@@ -890,7 +892,11 @@ class RootDataReader(object):
         for idx, key in enumerate(sorted(self.flat_keys())):
             if sys.version.startswith('3.') and isinstance(key, str):
                 key = key.encode('ascii') # convert string to binary
-            xdf[idx] = self.normalize(key, rec[key])
+            if key.decode() != self.label:
+                xdf[idx] = self.normalize(key, rec[key])
+            else:
+                idx_label = idx
+                xdf[idx] = rec[key]
             if hg and self.hists:
                 self.hdict['%s_orig' % key].fill(rec[key])
                 if xdf[idx] != self.nan:
@@ -943,7 +949,7 @@ class RootDataReader(object):
                     except:
                         print("aidx=%s, len(jagged_keys)=%s" % (aidx, len(self.jagged_keys())))
                         traceback.print_exc()
-        return xdf, mask
+        return xdf, mask, idx_label
 
     def find_branch_idx(self, attr):
         "Find start and end indexes of given attribute"
