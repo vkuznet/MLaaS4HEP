@@ -302,6 +302,9 @@ class RootDataGenerator(object):
             mask = np.array(mask)
         else:
             if data:
+                c = list(zip(data,mask))
+                random.shuffle(c)
+                data, mask = zip(*c)
                 label_list.append(np.array(data)[:,index_label])
                 data = np.delete(np.array(data),index_label,1)
                 mask = np.delete(np.array(mask),index_label,1)
