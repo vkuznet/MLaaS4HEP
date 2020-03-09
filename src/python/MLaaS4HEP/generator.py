@@ -238,6 +238,8 @@ class RootDataGenerator(object):
         self.jkeys = []
         self.nans = {}
         self.gname = "global-specs.json"
+        self.label_files = 0
+        self.finish_label = False
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
@@ -284,14 +286,15 @@ class RootDataGenerator(object):
 
     def next(self):
         "Return next batch of events in form of data and mask vectors"
+        data = []
+        mask = []
+        index_label = 0
         if self.shuffle:
             idx = random.randint(0, len(self.files)-1)
             self.current_file = self.files[idx]
+        while self.check_file():
+            pass
         gen = self.read_data(self.start_idx, self.stop_idx)
-        data = []
-        mask = []
-        label_list = []
-        index_label = 0
         for (xdf, mdf, idx_label) in gen:
             data.append(xdf)
             mask.append(mdf)
@@ -302,14 +305,67 @@ class RootDataGenerator(object):
             mask = np.array(mask)
         else:
             if data:
+                label = []
                 c = list(zip(data,mask))
                 random.shuffle(c)
                 data, mask = zip(*c)
-                label_list.append(np.array(data)[:,index_label])
+                label.append(np.array(data)[:,index_label])
                 data = np.delete(np.array(data),index_label,1)
                 mask = np.delete(np.array(mask),index_label,1)
-            label = label_list
         labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
+        return data, mask, labels
+
+    def choose_file(self):
+        if self.finish_label == False:
+            for key, value in self.file_label_dict.items():
+                if value != self.label_files:
+                    self.current_file = key
+                    break
+                else:
+                    if key == list(self.file_label_dict.keys())[-1]:
+                        self.finish_label = True
+                        idx = random.randint(0, len(self.files)-1)
+                        self.current_file = self.files[idx]
+        else:
+            idx = random.randint(0, len(self.files)-1)
+            self.current_file = self.files[idx]
+
+    def next_mix_classes(self):
+        "Return next batch of events in form of data and mask vectors"
+        data = []
+        mask = []
+
+        index_label = 0
+        if self.shuffle:
+            idx = random.randint(0, len(self.files)-1)
+            self.current_file = self.files[idx]
+        while self.check_file():
+            pass
+        gen = self.read_data(self.start_idx, self.stop_idx)
+        for (xdf, mdf, idx_label) in gen:
+            data.append(xdf)
+            mask.append(mdf)
+        label = self.file_label_dict[self.current_file]
+        labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
+        #First file read
+        print(f"label {self.file_label_dict[self.current_file]}, file <{self.current_file.split('/')[-1]}>, read {len(labels)} events")
+
+        self.label_files = label
+        self.choose_file()
+        while self.check_file():
+            pass
+        self.label_files = self.file_label_dict[self.current_file]
+
+        gen = self.read_data(self.start_idx, self.stop_idx)
+        for (xdf, mdf, idx_label) in gen:
+            data.append(xdf)
+            mask.append(xdf)
+        #Second file read
+        print(f"label {self.file_label_dict[self.current_file]}, file <{self.current_file.split('/')[-1]}>, read {len(data)-len(labels)} events")
+        label = self.file_label_dict[self.current_file]
+        labels = np.append(labels, np.full(shape=len(data)-len(labels), fill_value=label, dtype=np.int))
+        data = np.array(data)
+        mask = np.array(mask)
         return data, mask, labels
 
     def __iter__(self):
@@ -318,7 +374,8 @@ class RootDataGenerator(object):
 
     def __next__(self):
         "Provide generator capabilities to the class"
-        return self.next()
+        return self.next_mix_classes()
+
 
     def check_file(self):
         "This function allows to set self.start_idx, self.stop_idx, and to change the file to be read if necessary"
@@ -340,6 +397,7 @@ class RootDataGenerator(object):
                         self.reader_counter[self.current_file], self.reader[self.current_file].nrows)
                 print(msg)
             self.files.remove(self.current_file)
+            self.file_label_dict.pop(self.current_file)
             if self.files:
                 self.current_file = self.files[0]
                 self.stop_idx = self.start_idx + self.chunk_size
@@ -355,8 +413,6 @@ class RootDataGenerator(object):
 
     def read_data(self, start=0, stop=100):
         "Helper function to read ROOT data via uproot reader"
-        while self.check_file():
-            pass
         msg = "\nread chunk [{}:{}] from {}"\
                 .format(self.start_idx, self.stop_idx-1, self.current_file)
         if self.verbose:

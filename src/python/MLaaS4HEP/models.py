@@ -19,6 +19,9 @@ from __future__ import print_function, division, absolute_import
 # numpy modules
 import numpy as np
 
+#sklearn modules
+from sklearn.model_selection import train_test_split
+
 # keras modules
 from keras.utils import to_categorical
 
@@ -55,7 +58,7 @@ class Trainer(object):
         :param y_train: the true values vector for input data.
         :param kwds: defines input set of parameters for end-user model.
         """
-        if self.verbose:
+        if self.verbose > 1:
             print("Perform fit on {} data with {}"\
                     .format(np.shape(x_train), kwds))
         if self.cls_model.find('keras') != -1:
@@ -107,7 +110,8 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     split = params.get('split', 0.3)
     trainer = False
     kwds = {'epochs':epochs, 'batch_size': batch_size,
-            'shuffle': shuffle, 'validation_split': split}
+            'shuffle': shuffle}
+
     for data in gen:
         if np.shape(data[0])[0] == 0:
             print("received empty x_train chunk")
@@ -131,7 +135,17 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         # convert y_train to categorical array
         if model.loss == 'categorical_crossentropy':
             y_train = to_categorical(y_train)
-        trainer.fit(x_train, y_train, **kwds)
+
+        #create the validation set
+        x_train=np.append(x_train,np.array(y_train).reshape(len(y_train),1),axis=1)
+        train, val = train_test_split(x_train, stratify=y_train,test_size=split, random_state=17)
+        X_train=train[:,:-1]
+        Y_train=train[:,-1:]
+        X_val=val[:,:-1]
+        Y_val=val[:,-1:]
+
+        #fit the model
+        trainer.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
 
     if fout and hasattr(trainer, 'save'):
         trainer.save(fout)
