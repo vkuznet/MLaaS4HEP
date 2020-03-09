@@ -348,7 +348,8 @@ class RootDataGenerator(object):
         label = self.file_label_dict[self.current_file]
         labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
         #First file read
-        print(f"label {self.file_label_dict[self.current_file]}, file <{self.current_file.split('/')[-1]}>, read {len(labels)} events")
+        print(f"label {self.file_label_dict[self.current_file]},"
+        f"file <{self.current_file.split('/')[-1]}>, read {len(labels)} events")
 
         self.label_files = label
         self.choose_file()
@@ -361,7 +362,8 @@ class RootDataGenerator(object):
             data.append(xdf)
             mask.append(xdf)
         #Second file read
-        print(f"label {self.file_label_dict[self.current_file]}, file <{self.current_file.split('/')[-1]}>, read {len(data)-len(labels)} events")
+        print(f"label {self.file_label_dict[self.current_file]},"
+        f"file <{self.current_file.split('/')[-1]}>, read {len(data)-len(labels)} events")
         label = self.file_label_dict[self.current_file]
         labels = np.append(labels, np.full(shape=len(data)-len(labels), fill_value=label, dtype=np.int))
         data = np.array(data)
