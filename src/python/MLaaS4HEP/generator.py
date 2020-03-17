@@ -238,8 +238,9 @@ class RootDataGenerator(object):
         self.jkeys = []
         self.nans = {}
         self.gname = "global-specs.json"
-        self.label_files = 0
         self.finish_label = False
+        self.finish_file = False
+        self.events = {'total': 0}
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
@@ -304,6 +305,7 @@ class RootDataGenerator(object):
             data = np.array(data)
             mask = np.array(mask)
         else:
+            # one branch contains the label
             if data:
                 label = []
                 c = list(zip(data,mask))
@@ -314,6 +316,66 @@ class RootDataGenerator(object):
                 mask = np.delete(np.array(mask),index_label,1)
         labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
         return data, mask, labels
+
+    def next_mix_files(self):
+        '''Return next batch of events in form of data and mask vectors.
+           Use it to equally mix events from different files'''
+        data = []
+        mask = []
+        for fname in self.files:
+            if fname == self.files[0]:
+                start = self.start_idx
+            self.current_file = fname
+            if round((float(self.events[fname]) / self.events['total']) * self.chunk_size) + self.reader_counter[fname] >= self.events[fname]:
+                self.finish_file = True
+            if self.finish_file == False:
+                evts = round((float(self.events[fname])/self.events['total'])*self.chunk_size)
+                if evts == 0: continue
+                if fname == self.files[-1] and (self.start_idx + evts) % self.chunk_size != 0:
+                    self.stop_idx = start + self.chunk_size
+                    evts = self.stop_idx - self.start_idx
+                else:
+                    self.stop_idx = self.start_idx + evts
+            else:
+                evts = self.events[fname] - self.reader_counter[fname]
+                self.stop_idx = self.start_idx + evts
+            gen = self.read_data_mix_files(self.start_idx, self.stop_idx)
+            for (xdf, mdf, idx_label) in gen:
+                data.append(xdf)
+                mask.append(mdf)
+            label = self.file_label_dict[self.current_file]
+            if fname == self.files[0]:
+                labels = np.full(shape=evts, fill_value=label, dtype=np.int)
+            else:
+                labels = np.append(labels, np.full(shape=evts, fill_value=label, dtype=np.int))
+            print(f"label {self.file_label_dict[self.current_file]}, "
+            f"file <{self.current_file.split('/')[-1]}>, read {evts} events")
+        data = np.array(data)
+        mask = np.array(mask)
+        return data, mask, labels
+
+    def read_data_mix_files(self, start=0, stop=100):
+        "Helper function to read ROOT data via uproot reader"
+        msg = "\nread chunk [{}:{}] from {}"\
+                .format(start, stop-1, self.current_file)
+        if self.verbose:
+            print(msg)
+        current_file = self.current_file
+        reader = self.reader[current_file]
+        reader.load_specs(self.gname)
+        for _ in range(start, stop):
+            xdf, mask, idx_label = reader.next()
+            yield (xdf, mask, idx_label)
+        read_evts = stop - start
+        # update how many events we read from current file
+        self.reader_counter[self.current_file] += read_evts
+        # advance start and stop indecies
+        self.start_idx = stop
+        if self.verbose:
+            nevts = self.reader_counter[self.current_file]
+            msg = "\ntotal read {} evts from {}".format(nevts, current_file)
+            print(msg)
+
 
     def choose_file(self):
         if self.finish_label == False:
@@ -331,11 +393,12 @@ class RootDataGenerator(object):
             self.current_file = self.files[idx]
 
     def next_mix_classes(self):
-        "Return next batch of events in form of data and mask vectors"
+        '''Return next batch of events in form of data and mask vectors.
+           Use it to equally mix events with different labels'''
         data = []
         mask = []
 
-        index_label = 0
+        #Read first file
         if self.shuffle:
             idx = random.randint(0, len(self.files)-1)
             self.current_file = self.files[idx]
@@ -347,22 +410,20 @@ class RootDataGenerator(object):
             mask.append(mdf)
         label = self.file_label_dict[self.current_file]
         labels = np.full(shape=len(data), fill_value=label, dtype=np.int)
-        #First file read
-        print(f"label {self.file_label_dict[self.current_file]},"
+        print(f"label {self.file_label_dict[self.current_file]}, "
         f"file <{self.current_file.split('/')[-1]}>, read {len(labels)} events")
-
         self.label_files = label
+
+        #Read second file
         self.choose_file()
         while self.check_file():
             pass
         self.label_files = self.file_label_dict[self.current_file]
-
         gen = self.read_data(self.start_idx, self.stop_idx)
         for (xdf, mdf, idx_label) in gen:
             data.append(xdf)
             mask.append(xdf)
-        #Second file read
-        print(f"label {self.file_label_dict[self.current_file]},"
+        print(f"label {self.file_label_dict[self.current_file]}, "
         f"file <{self.current_file.split('/')[-1]}>, read {len(data)-len(labels)} events")
         label = self.file_label_dict[self.current_file]
         labels = np.append(labels, np.full(shape=len(data)-len(labels), fill_value=label, dtype=np.int))
@@ -376,7 +437,7 @@ class RootDataGenerator(object):
 
     def __next__(self):
         "Provide generator capabilities to the class"
-        return self.next_mix_classes()
+        return self.next_mix_files()
 
 
     def check_file(self):
@@ -448,11 +509,14 @@ class RootDataGenerator(object):
                 print("write {}".format(self.gname))
             with open(self.gname, 'w') as ostream:
                 out = {'jdim': self.jdim, 'minv': self.minv, 'maxv': self.maxv,\
-                    'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans}
+                    'fkeys': self.fkeys, 'jkeys': self.jkeys, 'nans': self.nans,\
+                        'events': self.events}
                 ostream.write(json.dumps(out))
 
     def global_specs (self, fname, reader):
         "Function to build specs for the whole set of root files"
+        self.events[fname] = reader.nrows
+        self.events['total'] += reader.nrows
         if fname == self.files[0]:
             self.jdim = reader.jdim
             self.minv = reader.minv
@@ -461,7 +525,6 @@ class RootDataGenerator(object):
             self.jkeys = reader.jkeys
             if len(self.files) == 1:
                 self.write_global_specs()
-
         else:
             for key in self.maxv.keys():
                 if reader.maxv[key] > self.maxv[key]:
