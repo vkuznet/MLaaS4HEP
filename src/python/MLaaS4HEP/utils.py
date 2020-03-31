@@ -131,7 +131,7 @@ def performance(nevts, tree, data, start_time, end_time, msg=""):
             nbytes / 1024**2, \
             end_time - start_time, \
             nbytes / 1024**2 / (end_time - start_time), \
-            tree.numentries / (end_time - start_time) / 1000))
+            nevts / (end_time - start_time) / 1000))
     except Exception as exc:
         print(str(exc))
 
