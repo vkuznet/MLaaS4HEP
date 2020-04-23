@@ -850,7 +850,6 @@ class RootDataReader(object):
     def next(self):
         "Provides read interface for next event using vectorize approach"
         self.idx = self.idx + 1
-
         # read new chunk of records if necessary
         if not self.idx % self.chunk_size:
             if self.idx + self.chunk_size > self.nrows:
@@ -884,12 +883,14 @@ class RootDataReader(object):
         return xdf, mask, self.idx_label
 
     def add_dim(self, elem, index):
+        "Allows to extend dimension of an array after reading the max dimension from the specs file"
         a = np.empty(self.dimension_list[index]) * np.nan
         a[:elem.shape[0]] = elem
         return a.tolist()
 
     def next_old(self):
-        "Provides read interface for next event using vectorize approach"
+        '''Provides read interface for next event using vectorize approach
+           This is the old function, slower than the new one. It is kept for completeness'''
         self.idx = self.idx + 1
         # build output matrix
         time0 = time.time()
