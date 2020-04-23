@@ -15,6 +15,7 @@ APIs to fit the model and yield predictions.
 from __future__ import print_function, division, absolute_import
 
 # system modules
+import time
 
 # numpy modules
 import numpy as np

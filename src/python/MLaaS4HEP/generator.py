@@ -271,9 +271,8 @@ class RootDataGenerator(object):
 
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
-
         self.current_file = self.files[0]
-        print("init RootDataGenerator in {} sec".format(time.time()-time0))
+        print("init RootDataGenerator in {} sec\n".format(time.time()-time0))
 
 
     @property
@@ -326,10 +325,10 @@ class RootDataGenerator(object):
             if fname == self.files[0]:
                 start = self.start_idx
             self.current_file = fname
-            if round((float(self.events[fname]) / self.events['total']) * self.chunk_size) + self.reader_counter[fname] >= self.events[fname]:
+            evts = round((float(self.events[fname])/self.events['total']) * self.chunk_size)
+            if evts + self.reader_counter[fname] >= self.events[fname]:
                 self.finish_file = True
             if self.finish_file == False:
-                evts = round((float(self.events[fname])/self.events['total'])*self.chunk_size)
                 if evts == 0: continue
                 if fname == self.files[-1] and (self.start_idx + evts) % self.chunk_size != 0:
                     self.stop_idx = start + self.chunk_size
@@ -339,6 +338,8 @@ class RootDataGenerator(object):
             else:
                 evts = self.events[fname] - self.reader_counter[fname]
                 self.stop_idx = self.start_idx + evts
+            print(f"label {self.file_label_dict[self.current_file]}, "
+            f"file <{self.current_file.split('/')[-1]}>, going to read {evts} events")
             gen = self.read_data_mix_files(self.start_idx, self.stop_idx)
             for (xdf, mdf, idx_label) in gen:
                 data.append(xdf)
@@ -348,21 +349,18 @@ class RootDataGenerator(object):
                 labels = np.full(shape=evts, fill_value=label, dtype=np.int)
             else:
                 labels = np.append(labels, np.full(shape=evts, fill_value=label, dtype=np.int))
-            print(f"label {self.file_label_dict[self.current_file]}, "
-            f"file <{self.current_file.split('/')[-1]}>, read {evts} events")
         data = np.array(data)
         mask = np.array(mask)
         return data, mask, labels
 
     def read_data_mix_files(self, start=0, stop=100):
         "Helper function to read ROOT data via uproot reader"
-        msg = "\nread chunk [{}:{}] from {}"\
+        msg = "read chunk [{}:{}] from {}"\
                 .format(start, stop-1, self.current_file)
         if self.verbose:
             print(msg)
         current_file = self.current_file
         reader = self.reader[current_file]
-        reader.load_specs(self.gname)
         for _ in range(start, stop):
             xdf, mask, idx_label = reader.next()
             yield (xdf, mask, idx_label)
@@ -373,7 +371,7 @@ class RootDataGenerator(object):
         self.start_idx = stop
         if self.verbose:
             nevts = self.reader_counter[self.current_file]
-            msg = "\ntotal read {} evts from {}".format(nevts, current_file)
+            msg = "total read {} evts from {}\n".format(nevts, current_file)
             print(msg)
 
 
