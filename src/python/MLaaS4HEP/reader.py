@@ -875,8 +875,11 @@ class RootDataReader(object):
             raise
 
         # normalise and adjust dimension of the events
-        result = [x1 if x3 == x2 else (x1 - x2) / (x3 - x2) for (x1, x2, x3) in zip(rec, self.min_list, self.max_list) ]
-        result = [[result[i]] if i < len(self.flat_keys_encoded) else result[i].tolist() if len(result[i]) == self.dimension_list[i] else self.add_dim(result[i], i) for i in range(0, len(result))]
+        result = [x1 if x3 == x2 else (x1 - x2) / (x3 - x2) for (x1, x2, x3) in \
+            zip(rec, self.min_list, self.max_list) ]
+        result = [[result[i]] if i < len(self.flat_keys_encoded) else result[i].tolist() \
+            if len(result[i]) == self.dimension_list[i] else \
+            self.add_dim(result[i], i) for i in range(0, len(result))]
         xdf = list(itertools.chain.from_iterable(result))
         mask = list(np.isnan(xdf) * 1)
         self.chunk_idx = self.chunk_idx + 1
