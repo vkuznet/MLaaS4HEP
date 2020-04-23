@@ -25,6 +25,7 @@ import json
 import random
 import argparse
 import traceback
+import itertools
 
 import gzip
 
@@ -576,6 +577,14 @@ class RootDataReader(object):
         self.cache = {}
         self.hdict = {}
         self.hists = histograms
+        self.idx_label = 0
+        self.flat_keys_encoded = []
+        self.jagged_keys_encoded = []
+        self.keys = []
+        self.min_list = []
+        self.max_list = []
+        self.jdimension = []
+        self.dimension_list = []
         if specs:
             self.load_specs(specs)
         else:
@@ -653,6 +662,15 @@ class RootDataReader(object):
         self.jkeys = specs['jkeys']
         self.fkeys = specs['fkeys']
         self.nans = specs['nans']
+
+        self.flat_keys_encoded = sorted([key.encode('ascii') for key in self.flat_keys()])
+        self.jagged_keys_encoded = sorted([key.encode('ascii') for key in self.jagged_keys()])
+        self.keys = self.flat_keys_encoded + self.jagged_keys_encoded
+        self.min_list = [self.minv[key.decode('ascii')] for key in self.keys]
+        self.max_list = [self.maxv[key.decode('ascii')] for key in self.keys]
+        self.jdimension = [self.jdim[key.decode('ascii')] for key in self.jagged_keys_encoded]
+        self.dimension_list = [1] * len(self.flat_keys_encoded)
+        self.dimension_list = self.dimension_list + self.jdimension
 
     def fetch_data(self, key):
         "fetch data for given key from underlying ROOT tree"
@@ -831,6 +849,51 @@ class RootDataReader(object):
 
     def next(self):
         "Provides read interface for next event using vectorize approach"
+        self.idx = self.idx + 1
+        # read new chunk of records if necessary
+        if not self.idx % self.chunk_size:
+            if self.idx + self.chunk_size > self.nrows:
+                nevts = self.nrows - self.idx
+            else:
+                nevts = self.chunk_size
+            self.read_chunk(nevts)
+            self.chunk_idx = 0 # reset chunk index after we read the chunk of data
+            self.idx = self.idx - nevts # reset index after chunk read by nevents offset
+            if self.verbose > 1:
+                print("idx", self.idx, "read", nevts, "events")
+
+        # form DataFrame record
+        try:
+            rec = [self.branches[key][self.chunk_idx] for key in self.keys]
+        except:
+            if len(rec) <= self.chunk_idx:
+                raise Exception("For key='%s' unable to find data at pos=%s while got %s" \
+                    % (key, self.chunk_idx, len(self.branches[key])))
+            print("failed key", key)
+            print("failed idx", self.chunk_idx)
+            print("len(fdata)", len(self.branches[key]))
+            raise
+
+        # normalise and adjust dimension of the events
+        result = [x1 if x3 == x2 else (x1 - x2) / (x3 - x2) for (x1, x2, x3) in \
+            zip(rec, self.min_list, self.max_list) ]
+        result = [[result[i]] if i < len(self.flat_keys_encoded) else result[i].tolist() \
+            if len(result[i]) == self.dimension_list[i] else \
+            self.add_dim(result[i], i) for i in range(0, len(result))]
+        xdf = list(itertools.chain.from_iterable(result))
+        mask = list(np.isnan(xdf) * 1)
+        self.chunk_idx = self.chunk_idx + 1
+        return xdf, mask, self.idx_label
+
+    def add_dim(self, elem, index):
+        "Allows to extend dimension of an array after reading the max dimension from the specs file"
+        a = np.empty(self.dimension_list[index]) * np.nan
+        a[:elem.shape[0]] = elem
+        return a.tolist()
+
+    def next_old(self):
+        '''Provides read interface for next event using vectorize approach
+           This is the old function, slower than the new one. It is kept for completeness'''
         self.idx = self.idx + 1
         # build output matrix
         time0 = time.time()
