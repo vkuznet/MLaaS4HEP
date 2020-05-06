@@ -266,11 +266,11 @@ class RootDataGenerator(object):
                     print("writing specs {}".format(sname))
                 reader.write_specs(sname)
 
-            if not specs:
-                reader.load_specs(sname)
-
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
+
+        for fname in self.files:
+            self.reader[fname].load_specs(self.gname)
         self.current_file = self.files[0]
         print("init RootDataGenerator in {} sec\n".format(time.time()-time0))
 

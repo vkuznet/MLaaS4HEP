@@ -156,7 +156,6 @@ def min_max_arr(arr):
     try:
         if isinstance(arr, JaggedArray):
             arr = arr.flatten()
-            return float(np.min(arr)), float(np.amax(arr))
         return float(np.min(arr)), float(np.max(arr))
     except ValueError:
         return 1e15, -1e15
@@ -652,7 +651,7 @@ class RootDataReader(object):
         "load given specs"
         if not isinstance(specs, dict):
             if self.verbose:
-                print("load specs from {}".format(specs))
+                print(f"load specs from {specs} for {self.fin}")
             specs = json.load(open(specs))
         if self.verbose > 1:
             print("ROOT specs: {}".format(json.dumps(specs)))
