@@ -148,27 +148,6 @@ def dim_jarr(arr):
             jdim = len(item)
     return jdim
 
-def min_max_arr_old(arr):
-    """
-    Helper function to find out min/max values of given array.
-    The array can be either jagged one or normal numpy.ndarray
-    """
-    try:
-        if isinstance(arr, JaggedArray):
-            minv = 1e15
-            maxv = -1e15
-            for item in arr:
-                if not item.any():
-                    continue
-                if np.min(item) < minv:
-                    minv = np.min(item)
-                if np.max(item) > maxv:
-                    maxv = np.max(item)
-            return float(minv), float(maxv)
-        return float(np.min(arr)), float(np.max(arr))
-    except ValueError:
-        return 1e15, -1e15
-
 def min_max_arr(arr):
     """
     Helper function to find out min/max values of given array.
