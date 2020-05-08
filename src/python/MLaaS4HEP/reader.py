@@ -882,7 +882,7 @@ class RootDataReader(object):
         xdf = list(itertools.chain.from_iterable(result))
         mask = list(np.isnan(xdf) * 1)
         self.chunk_idx = self.chunk_idx + 1
-        return xdf, mask, self.idx_label
+        return np.array(xdf), np.array(mask), self.idx_label
 
     def add_dim(self, elem, index):
         "Allows to extend dimension of an array after reading the max dimension from the specs file"
