@@ -1,19 +1,18 @@
 """
 Basic example of ML model implemented via Keras framework
 """
+from tensorflow import keras
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense
+import tensorflow as tf
 
 def model(idim):
     "Simple Keras model for testing purposes"
-
-    ml_model = Sequential([
-        Dense(32, input_shape=(idim,)),
-        Activation('relu'),
-        Dense(2), # use Dense(1) if you have 2 output classes
-        Activation('softmax'),
-    ])
-    ml_model.compile(optimizer='adam', \
-                  loss='categorical_crossentropy',  # use loss='binary_crossentropy' if you have 2 output classes
-                  metrics=['accuracy'])
+    ml_model = keras.Sequential([keras.layers.Dense(128, activation='relu',input_shape=(idim,)),
+                              keras.layers.Dropout(0.5),
+                              keras.layers.Dense(64, activation='relu'),
+                              keras.layers.Dropout(0.5),
+                              keras.layers.Dense(1, activation='sigmoid')])
+    ml_model.compile(optimizer=keras.optimizers.Adam(lr=1e-3), loss=keras.losses.BinaryCrossentropy(),
+                  metrics=[keras.metrics.BinaryAccuracy(name='accuracy'), keras.metrics.AUC(name='auc')])
     return ml_model

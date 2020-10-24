@@ -281,6 +281,7 @@ class RootDataGenerator(object):
                 self.evts_toread[fname] = round((float(self.events[fname])/self.events['total']) * self.chunk_size)
         self.current_file = self.files[0]
         print("init RootDataGenerator in {} sec\n".format(time.time()-time0))
+        #os.remove("global-specs.json")
 
 
     @property
@@ -360,8 +361,13 @@ class RootDataGenerator(object):
                 labels = np.full(shape=evts, fill_value=label, dtype=np.int)
             else:
                 labels = np.append(labels, np.full(shape=evts, fill_value=label, dtype=np.int))
+        time2=time.time()
+        #print(data)
         data = np.array(data)
         mask = np.array(mask)
+        #print(data)
+        print(f"Time for converting into np.array: {time.time()-time2}")
+        print(f"Time for handling a chunk: {time.time()-time_start}")
         return data, mask, labels
 
     def read_data_mix_files(self, start=0, stop=100):
@@ -451,6 +457,7 @@ class RootDataGenerator(object):
 
     def check_file(self):
         "This function allows to set self.start_idx, self.stop_idx, and to change the file to be read if necessary"
+        print(f"self.evts: {self.evts}; self.stop_idx {self.stop_idx}")
         if self.evts != -1 and self.stop_idx > self.evts:
             if self.stop_idx - self.evts < self.chunk_size:
                 self.stop_idx = self.evts
