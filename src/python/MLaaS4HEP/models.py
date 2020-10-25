@@ -132,8 +132,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             x_mask = data[1]
             x_train[np.isnan(x_train)] = 0 # convert all nan's to zero
             y_train = data[2]
-            '''
-            import pandas as pd
+            #import pandas as pd
             #pd.DataFrame(x_train).to_csv('x_train.csv', header=None, index=None, mode='a')
             #pd.DataFrame(y_train).to_csv('y_train.csv', header=None, index=None, mode='a')
             #print("x_mask chunk of {} shape".format(np.shape(x_mask)))
@@ -148,6 +147,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         #if model.loss == 'categorical_crossentropy':
         #    y_train = to_categorical(y_train)
     #print(f"Total time for preparing data for training: {time.time()-time_start}")
+        time0=time.time()
         x_train=np.append(x_train,np.array(y_train).reshape(len(y_train),1),axis=1)
         train_val, test = train_test_split(x_train, stratify=y_train,test_size=0.2, random_state=21, shuffle=True)
         X_train_val=train_val[:,:-1]
@@ -164,29 +164,31 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         #pd.DataFrame(X_test).to_csv('x_test_prova.csv', header=None, index=None, mode='a')
         #pd.DataFrame(Y_test).to_csv('y_test_prova.csv', header=None, index=None, mode='a')
         
-        pd.DataFrame(X_train).to_csv('x_train_new.csv', header=None, index=None, mode='a')
-        pd.DataFrame(Y_train).to_csv('y_train_new.csv', header=None, index=None, mode='a')
-        pd.DataFrame(X_val).to_csv('x_val_new.csv', header=None, index=None, mode='a')
-        pd.DataFrame(Y_val).to_csv('y_val_new.csv', header=None, index=None, mode='a')
-        pd.DataFrame(X_test).to_csv('x_test_new.csv', header=None, index=None, mode='a')
-        pd.DataFrame(Y_test).to_csv('y_test_new.csv', header=None, index=None, mode='a')
-        import tensorflow as tf
-        dizio={'test_loss':[], 'test_accuracy':[], 'test_auc':[]}
-        class TestCallback(tf.keras.callbacks.Callback):
-            def on_epoch_end(self, epoch, logs=None):
-                loss, acc, auc= self.model.evaluate(X_test, Y_test, verbose=0)
-                dizio['test_loss'].append(loss)
-                dizio['test_accuracy'].append(acc)
-                dizio['test_auc'].append(auc)
-                print('\nTesting loss: {}, acc: {}, auc: {}\n'.format(loss, acc, auc))
+        #pd.DataFrame(X_train).to_csv('x_train_new.csv', header=None, index=None, mode='a')
+        #pd.DataFrame(Y_train).to_csv('y_train_new.csv', header=None, index=None, mode='a')
+        #pd.DataFrame(X_val).to_csv('x_val_new.csv', header=None, index=None, mode='a')
+        #pd.DataFrame(Y_val).to_csv('y_val_new.csv', header=None, index=None, mode='a')
+        #pd.DataFrame(X_test).to_csv('x_test_new.csv', header=None, index=None, mode='a')
+        #pd.DataFrame(Y_test).to_csv('y_test_new.csv', header=None, index=None, mode='a')
+        #import tensorflow as tf
+        #dizio={'test_loss':[], 'test_accuracy':[], 'test_auc':[]}
+        #class TestCallback(tf.keras.callbacks.Callback):
+        #   def on_epoch_end(self, epoch, logs=None):
+        #       loss, acc, auc= self.model.evaluate(X_test, Y_test, verbose=0)
+        #       dizio['test_loss'].append(loss)
+        #       dizio['test_accuracy'].append(acc)
+        #       dizio['test_auc'].append(auc)
+        #       print('\nTesting loss: {}, acc: {}, auc: {}\n'.format(loss, acc, auc))
         
         #fit the model
+        time0=time.time()
         model.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
+        print(time.time()-time0)
     #X_test = pd.read_csv('x_test_prova.csv').values
     #Y_test = pd.read_csv('y_test_prova.csv').values
     #results = model.evaluate(X_test, Y_test, verbose=0)
     #print(results)
-    
+        '''
         print(dizio)
 
         import json,codecs
