@@ -281,7 +281,6 @@ class RootDataGenerator(object):
                 self.evts_toread[fname] = round((float(self.events[fname])/self.events['total']) * self.chunk_size)
         self.current_file = self.files[0]
         print("init RootDataGenerator in {} sec\n".format(time.time()-time0))
-        #os.remove("global-specs.json")
 
 
     @property
@@ -330,7 +329,7 @@ class RootDataGenerator(object):
            Use it to equally mix events from different files'''
         if self.finish_file == True:
             raise StopIteration
-        time_start=time.time()
+        #time_start=time.time()
         data = []
         mask = []
         for fname in self.files:
@@ -362,10 +361,8 @@ class RootDataGenerator(object):
             else:
                 labels = np.append(labels, np.full(shape=evts, fill_value=label, dtype=np.int))
         #time2=time.time()
-        #print(data)
         data = np.array(data)
         mask = np.array(mask)
-        #print(data)
         #print(f"Time for converting into np.array: {time.time()-time2}")
         #print(f"Time for handling a chunk: {time.time()-time_start}")
         return data, mask, labels
