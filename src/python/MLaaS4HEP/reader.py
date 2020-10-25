@@ -558,9 +558,7 @@ class RootDataReader(object):
         self.verbose = verbose
         if self.verbose:
             print("Reading {}".format(self.fin))
-        time_inizio=time.time()
         self.istream = uproot.open(self.fin)
-        print(f"Time for opening: {time.time()-time_inizio}")
         self.branches = {}
         self.gen = None
         self.out_branches = []
@@ -912,7 +910,6 @@ class RootDataReader(object):
            This is the old function, slower than the new one. It is kept for completeness'''
         self.idx = self.idx + 1
         # build output matrix
-        #time0 = time.time()
         shape = len(self.flat_keys())
         for key in sorted(self.jagged_keys()):
             shape += self.jdim[key]
