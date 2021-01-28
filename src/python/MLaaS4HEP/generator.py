@@ -241,6 +241,7 @@ class RootDataGenerator(object):
         self.finish_label = False
         self.finish_file = False
         self.events = {'total': 0}
+        self.evts_toread = {}
 
         # loop over files and create individual readers for them, then put them in a global reader
         for fname in self.files:
@@ -271,6 +272,13 @@ class RootDataGenerator(object):
 
         for fname in self.files:
             self.reader[fname].load_specs(self.gname)
+            if self.evts != -1:
+                self.events[fname] = round((float(self.events[fname])/self.events['total'])*self.evts)
+                if self.events[fname] == 0:
+                    self.events[fname] = 1
+                self.evts_toread[fname] = round((float(self.events[fname])/self.evts) * self.chunk_size)
+            else:
+                self.evts_toread[fname] = round((float(self.events[fname])/self.events['total']) * self.chunk_size)
         self.current_file = self.files[0]
         print("init RootDataGenerator in {} sec\n".format(time.time()-time0))
 
@@ -319,13 +327,15 @@ class RootDataGenerator(object):
     def next_mix_files(self):
         '''Return next batch of events in form of data and mask vectors.
            Use it to equally mix events from different files'''
+        if self.finish_file == True:
+            raise StopIteration
         data = []
         mask = []
         for fname in self.files:
             if fname == self.files[0]:
                 start = self.start_idx
             self.current_file = fname
-            evts = round((float(self.events[fname])/self.events['total']) * self.chunk_size)
+            evts = self.evts_toread[fname]
             if evts + self.reader_counter[fname] >= self.events[fname]:
                 self.finish_file = True
             if self.finish_file == False:
