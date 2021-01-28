@@ -802,8 +802,10 @@ class RootDataReader(object):
                     self.jdim[key] = dim
             listone.append(time.time()-time_inizio)
             if self.nevts > 0 and tot >= self.nevts:
+                print(f"###total time elapsed for reading + specs computing: {sum(listone[:])}; number of chunks {len(listone)}")
+                print(f"###total time elapsed for reading: {sum(self.cicciobello[:])}; number of chunks {len(self.cicciobello)}\n")
                 print(f"###total time elapsed for reading + specs computing: {sum(listone[:-1])}; number of chunks {len(listone)-1}")
-                print(f"###total time elapsed for reading: {sum(self.cicciobello[:-1])}; number of chunks {len(self.cicciobello)-1}")
+                print(f"###total time elapsed for reading: {sum(self.cicciobello[:-1])}; number of chunks {len(self.cicciobello)-1}\n")
                 break
 
         # if we've been asked to read all or zero events we determine

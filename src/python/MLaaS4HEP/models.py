@@ -121,6 +121,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     auc_test=[]
     from sklearn.metrics import accuracy_score, roc_auc_score, log_loss
     for data in gen:
+        time_ml=time.time()
         if np.shape(data[0])[0] == 0:
             print("received empty x_train chunk")
             break
@@ -181,9 +182,10 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         #       print('\nTesting loss: {}, acc: {}, auc: {}\n'.format(loss, acc, auc))
         
         #fit the model
+        print(f"\n####Time pre ml: {time.time()-time_ml}")
         time0=time.time()
         model.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
-        print(time.time()-time0)
+        print(f"\n####Time for training: {time.time()-time0}")
     #X_test = pd.read_csv('x_test_prova.csv').values
     #Y_test = pd.read_csv('y_test_prova.csv').values
     #results = model.evaluate(X_test, Y_test, verbose=0)
