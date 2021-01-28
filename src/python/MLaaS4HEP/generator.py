@@ -329,7 +329,6 @@ class RootDataGenerator(object):
            Use it to equally mix events from different files'''
         if self.finish_file == True:
             raise StopIteration
-        time_start=time.time()
         data = []
         mask = []
         for fname in self.files:
