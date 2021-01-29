@@ -801,10 +801,11 @@ class RootDataReader(object):
                     self.jdim[key] = dim
             self.time_reading_and_specs.append(time.time()-time_beginning)
             if self.nevts > 0 and tot >= self.nevts:
-                print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:])}; number of chunks {len(self.time_reading_and_specs)}")
-                print(f"###total time elapsed for reading: {sum(self.time_reading[:])}; number of chunks {len(self.time_reading)}\n")
-                print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:-1])}; number of chunks {len(self.time_reading_and_specs)-1}")
-                print(f"###total time elapsed for reading: {sum(self.time_reading[:-1])}; number of chunks {len(self.time_reading)-1}\n")
+                if self.verbose:
+                    print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:])}; number of chunks {len(self.time_reading_and_specs)}")
+                    print(f"###total time elapsed for reading: {sum(self.time_reading[:])}; number of chunks {len(self.time_reading)}\n")
+                    print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:-1])}; number of chunks {len(self.time_reading_and_specs)-1}")
+                    print(f"###total time elapsed for reading: {sum(self.time_reading[:-1])}; number of chunks {len(self.time_reading)-1}\n")
                 break
 
         # if we've been asked to read all or zero events we determine
@@ -931,13 +932,13 @@ class RootDataReader(object):
                 print("idx", self.idx, "read", nevts, "events")
 
         # read event info
-        #event = []
-        #for key in self.identifier:
-        #    fdata = self.fetch_data(key)
-        #    if len(fdata) <= self.chunk_idx:
-        #        raise Exception("For key='%s' unable to find data at pos=%s while got %s" \
-        #                % (key, self.chunk_idx, len(fdata)))
-        #    event.append(fdata[self.chunk_idx])
+        event = []
+        for key in self.identifier:
+            fdata = self.fetch_data(key)
+            if len(fdata) <= self.chunk_idx:
+                raise Exception("For key='%s' unable to find data at pos=%s while got %s" \
+                        % (key, self.chunk_idx, len(fdata)))
+            event.append(fdata[self.chunk_idx])
 
         # form DataFrame record
         rec = {}
