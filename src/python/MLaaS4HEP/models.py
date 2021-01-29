@@ -121,7 +121,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     #auc_test=[]
     from sklearn.metrics import accuracy_score, roc_auc_score, log_loss
     for data in gen:
-        time_ml=time.time()
+        time_ml = time.time()
         if np.shape(data[0])[0] == 0:
             print("received empty x_train chunk")
             break
@@ -145,15 +145,14 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             print("model", model, "loss function", model.loss)
             trainer = Trainer(model, verbose=params.get('verbose', 0))
         # convert y_train to categorical array
-        #if model.loss == 'categorical_crossentropy':
-        #    y_train = to_categorical(y_train)
-    #print(f"Total time for preparing data for training: {time.time()-time_start}")
-        x_train=np.append(x_train,np.array(y_train).reshape(len(y_train),1),axis=1)
+        if model.loss == 'categorical_crossentropy':
+            y_train = to_categorical(y_train)
+        x_train = np.append(x_train,np.array(y_train).reshape(len(y_train),1),axis=1)
         train_val, test = train_test_split(x_train, stratify=y_train,test_size=0.2, random_state=21, shuffle=True)
-        X_train_val=train_val[:,:-1]
-        Y_train_val=train_val[:,-1:]
-        X_test=test[:,:-1]
-        Y_test=test[:,-1:]
+        X_train_val = train_val[:,:-1]
+        Y_train_val = train_val[:,-1:]
+        X_test = test[:,:-1]
+        Y_test = test[:,-1:]
         
         #create the validation set
         train, val = train_test_split(train_val, stratify=Y_train_val, test_size=0.2, random_state=21, shuffle=True)
@@ -182,7 +181,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         
         #fit the model
         print(f"\n####Time pre ml: {time.time()-time_ml}")
-        time0=time.time()
+        time0 = time.time()
         model.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
         print(f"\n####Time for training: {time.time()-time0}")
     #X_test = pd.read_csv('x_test_prova.csv').values
