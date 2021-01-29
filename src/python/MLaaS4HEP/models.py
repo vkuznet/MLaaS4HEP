@@ -160,4 +160,4 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         print(f"\n####Time for training: {time.time()-time0}\n\n")
     
     if fout and hasattr(trainer, 'save'):
-        trainer.save('model_new.h5')
+        trainer.save('fout')
