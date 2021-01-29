@@ -562,7 +562,8 @@ class RootDataReader(object):
         self.branches = {}
         self.gen = None
         self.out_branches = []
-        self.identifier = identifier if identifier else ['run', 'event', 'luminosityBlock']
+        self.identifier = identifier if identifier \
+            else [] if identifier == [] else ['run', 'event', 'luminosityBlock']
         self.tree = self.istream[branch]
         self.nrows = self.tree.numentries
         self.nevts = nevts if nevts != -1 else self.nrows
@@ -695,7 +696,6 @@ class RootDataReader(object):
             if self.out_branches:
                 self.gen = self.tree.iterate(\
                         branches=self.out_branches+self.identifier, \
-                        #branches=self.out_branches, \
                         entrysteps=nevts, keycache=self.cache)
             else:
                 self.gen = self.tree.iterate(\
@@ -707,12 +707,12 @@ class RootDataReader(object):
             if self.out_branches:
                 self.gen = self.tree.iterate(\
                         branches=self.out_branches+self.identifier, \
-                        #branches=self.out_branches, \
                         entrysteps=nevts, keycache=self.cache)
             else:
                 self.gen = self.tree.iterate(entrysteps=nevts, keycache=self.cache)
             self.branches = next(self.gen) # python 3.X and 2.X
         self.time_reading.append(time.time()-start_time)
+        end_time = time.time()
         self.idx += nevts
         if self.verbose:
             performance(nevts, self.tree, self.branches, start_time, end_time)
