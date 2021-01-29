@@ -562,8 +562,7 @@ class RootDataReader(object):
         self.branches = {}
         self.gen = None
         self.out_branches = []
-        self.identifier = identifier if identifier \
-            else [] if identifier == [] else ['run', 'event', 'luminosityBlock']
+        self.identifier = identifier if identifier else ['run', 'event', 'luminosityBlock']
         self.tree = self.istream[branch]
         self.nrows = self.tree.numentries
         self.nevts = nevts if nevts != -1 else self.nrows
@@ -599,12 +598,6 @@ class RootDataReader(object):
 
         # perform initialization
         time0 = time.time()
-        #selected_branches=["ak4jetBtag1", "ak4jetBtag2", "nJets", "nBJets", "ak8sumPt", "ak8ak4deltaR1min", "ak8ak4deltaR2min", "Apla", "Cent", "Spher", "t3t1","t3t2", "jetBtagSub0", "jetBtagSub1"]
-        #selected_branches=["Apla", "Cent", "Spher", "ak4bbDeltaR", "ak4bbEta", "ak4bbPhi", "ak4jetBtag1", "ak4jetBtag2",
-        #       "ak4jetE1", "ak4jetE2", "ak4jetMass1", "ak4jetMass2", "ak4jetPt1", "ak4jetPt2", "ak8LjetPt",
-        #       "ak8ak4deltaR1min", "ak8ak4deltaR2min", "ak8sumPt", "genEvtWeight", "jetBtagSub0",
-        #       "jetBtagSub1", "jetNBSub", "nBJets", "nJets", "tau1", "tau2", "tau3","t3t1","t3t2"]
-        #self.out_branches=selected_branches
         self.init()
         if self.verbose:
             print("{} init is complete in {} sec".format(self, time.time()-time0))
@@ -706,7 +699,7 @@ class RootDataReader(object):
         except StopIteration:
             if self.out_branches:
                 self.gen = self.tree.iterate(\
-                        branches=self.out_branches+self.identifier, \
+                        branches=self.out_branches+self.identifier+"patata", \
                         entrysteps=nevts, keycache=self.cache)
             else:
                 self.gen = self.tree.iterate(entrysteps=nevts, keycache=self.cache)
