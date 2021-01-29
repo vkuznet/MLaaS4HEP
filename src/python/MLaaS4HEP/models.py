@@ -113,12 +113,12 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     kwds = {'epochs':epochs, 'batch_size': batch_size,
             'shuffle': shuffle}
 
-    accuracy_train=[]
-    accuracy_test=[]
-    log_loss_train=[]
-    log_loss_test=[]
-    auc_train=[]
-    auc_test=[]
+    #accuracy_train=[]
+    #accuracy_test=[]
+    #log_loss_train=[]
+    #log_loss_test=[]
+    #auc_train=[]
+    #auc_test=[]
     from sklearn.metrics import accuracy_score, roc_auc_score, log_loss
     for data in gen:
         time_ml=time.time()
