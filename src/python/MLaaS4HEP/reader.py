@@ -941,7 +941,6 @@ class RootDataReader(object):
 
         # form DataFrame record
         rec = {}
-        #time_start=time.time()
         for key in self.branches.keys():
             try:
                 fdata = self.fetch_data(key)
