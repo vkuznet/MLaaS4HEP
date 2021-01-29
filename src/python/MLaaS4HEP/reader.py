@@ -955,6 +955,7 @@ class RootDataReader(object):
                 print("failed idx", self.chunk_idx)
                 print("len(fdata)", len(fdata))
                 raise
+
         # advance chunk index since we read the record
         self.chunk_idx = self.chunk_idx + 1
 
@@ -1074,7 +1075,6 @@ class RootDataReader(object):
             return self.nan
         minv = float(self.minv.get(key, 0))
         maxv = float(self.maxv.get(key, 1))
-        #print(f"key: {key}; minv: {minv}; maxv: {maxv}; val: {val}; normalized: {(val-minv)/(maxv-minv)}")
         if maxv == minv:
             return val
         return (val-minv)/(maxv-minv)
