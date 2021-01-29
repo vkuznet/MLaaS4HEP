@@ -584,6 +584,8 @@ class RootDataReader(object):
         self.max_list = []
         self.jdimension = []
         self.dimension_list = []
+        self.time_reading = []
+        self.time_reading_and_specs = []
         if specs:
             self.load_specs(specs)
         else:
@@ -702,6 +704,7 @@ class RootDataReader(object):
             else:
                 self.gen = self.tree.iterate(entrysteps=nevts, keycache=self.cache)
             self.branches = next(self.gen) # python 3.X and 2.X
+        self.time_reading.append(time.time()-start_time)
         end_time = time.time()
         self.idx += nevts
         if self.verbose:
@@ -772,6 +775,7 @@ class RootDataReader(object):
         set_branches = True
         set_min_max = True
         for chunk in steps(tot_rows, self.chunk_size):
+            time_beginning = time.time()
             if tot + self.chunk_size > self.nevts:
                 nevts = self.nevts - tot
                 tot = self.nevts
@@ -788,7 +792,13 @@ class RootDataReader(object):
                 dim = dim_jarr(self.fetch_data(key))
                 if dim > self.jdim.get(key, 0):
                     self.jdim[key] = dim
+            self.time_reading_and_specs.append(time.time()-time_beginning)
             if self.nevts > 0 and tot >= self.nevts:
+                if self.verbose:
+                    print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:])}; number of chunks {len(self.time_reading_and_specs)}")
+                    print(f"###total time elapsed for reading: {sum(self.time_reading[:])}; number of chunks {len(self.time_reading)}\n")
+                    print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:-1])}; number of chunks {len(self.time_reading_and_specs)-1}")
+                    print(f"###total time elapsed for reading: {sum(self.time_reading[:-1])}; number of chunks {len(self.time_reading)-1}\n")
                 break
 
         # if we've been asked to read all or zero events we determine
