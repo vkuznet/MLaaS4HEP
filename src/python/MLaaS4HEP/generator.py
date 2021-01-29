@@ -362,11 +362,9 @@ class RootDataGenerator(object):
                 labels = np.full(shape=evts, fill_value=label, dtype=np.int)
             else:
                 labels = np.append(labels, np.full(shape=evts, fill_value=label, dtype=np.int))
-        #time2=time.time()
         data = np.array(data)
         mask = np.array(mask)
-        #print(f"Time for converting into np.array: {time.time()-time2}")
-        print(f"Time for handling a chunk: {time.time()-time_start}\n\n")
+        print(f"\nTime for handling a chunk: {time.time()-time_start}\n\n")
         return data, mask, labels
 
     def read_data_mix_files(self, start=0, stop=100):

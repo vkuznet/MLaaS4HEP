@@ -4,7 +4,6 @@ Basic example of ML model implemented via Keras framework
 from tensorflow import keras
 from keras.models import Sequential
 from keras.layers import Dense
-import tensorflow as tf
 
 def model(idim):
     "Simple Keras model for testing purposes"
