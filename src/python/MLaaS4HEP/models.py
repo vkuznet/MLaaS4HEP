@@ -156,8 +156,8 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         #fit the model
         print(f"\n####Time pre ml: {time.time()-time_ml}")
         time0 = time.time()
-        model.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
+        trainer.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
         print(f"\n####Time for training: {time.time()-time0}\n\n")
     
     if fout and hasattr(trainer, 'save'):
-        model.save('model_new.h5')
+        trainer.save('model_new.h5')
