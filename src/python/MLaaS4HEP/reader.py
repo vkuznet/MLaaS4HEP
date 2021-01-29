@@ -699,7 +699,7 @@ class RootDataReader(object):
         except StopIteration:
             if self.out_branches:
                 self.gen = self.tree.iterate(\
-                        branches=self.out_branches+self.identifier+"patata", \
+                        branches=self.out_branches+self.identifier, \
                         entrysteps=nevts, keycache=self.cache)
             else:
                 self.gen = self.tree.iterate(entrysteps=nevts, keycache=self.cache)
