@@ -596,47 +596,21 @@ class RootDataReader(object):
             self.fkeys = []
             self.nans = {}
 
-        # perform initialization
         time0 = time.time()
+        if exclude_branches:
+            print(f"Excluded branches: {exclude_branches}")
+            all_branches=self.tree.keys()
+            exclude_branches=[elem.encode() for elem in exclude_branches]
+            self.out_branches=[elem for elem in all_branches if (elem not in exclude_branches)]
+        if selected_branches:
+            print(f"Selected branches: {selected_branches}")
+            selected_branches=[elem.encode() for elem in selected_branches]
+            self.out_branches=[elem for elem in selected_branches]
+
+        # perform initialization
         self.init()
         if self.verbose:
             print("{} init is complete in {} sec".format(self, time.time()-time0))
-
-        if selected_branches:
-            self.out_branches = []
-            for attr in self.attrs:
-                for name in selected_branches:
-                    if name.find('*') != -1:
-                        if attr.startswith(name):
-                            self.out_branches.append(attr)
-                    else:
-                        if attr == name:
-                            self.out_branches.append(attr)
-
-            if self.out_branches:
-                if self.verbose:
-                    print("Select branches ...")
-                    for name in sorted(self.out_branches):
-                        print(name)
-        if exclude_branches:
-            out_branches = set()
-            for attr in self.attrs:
-                count = 0
-                for name in exclude_branches:
-                    if name.find('*') != -1:
-                        if attr.startswith(name):
-                            count += 1
-                    else:
-                        if attr == name:
-                            count += 1
-                if not count:
-                    out_branches.add(attr)
-            self.out_branches = list(out_branches)
-            if self.out_branches:
-                if self.verbose:
-                    print("Select branches ...")
-                    for name in sorted(self.out_branches):
-                        print(name)
 
         # declare histograms for original and normilized values
         if hg and self.hists:
@@ -688,7 +662,7 @@ class RootDataReader(object):
         if not self.gen:
             if self.out_branches:
                 self.gen = self.tree.iterate(\
-                        branches=self.out_branches+self.identifier, \
+                        branches=self.out_branches, \
                         entrysteps=nevts, keycache=self.cache)
             else:
                 self.gen = self.tree.iterate(\
@@ -699,7 +673,7 @@ class RootDataReader(object):
         except StopIteration:
             if self.out_branches:
                 self.gen = self.tree.iterate(\
-                        branches=self.out_branches+self.identifier, \
+                        branches=self.out_branches, \
                         entrysteps=nevts, keycache=self.cache)
             else:
                 self.gen = self.tree.iterate(entrysteps=nevts, keycache=self.cache)
