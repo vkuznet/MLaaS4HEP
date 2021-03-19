@@ -1004,15 +1004,10 @@ class RootDataReader(object):
     def jagged_keys(self):
         "helper function to return list of jagged branches"
         jkeys = sorted(list(self.jkeys))
-        if self.out_branches:
-            return [k for k in jkeys if k in self.out_branches]
         return jkeys
 
     def flat_keys(self):
         "helper function to return list of normal branches"
-        if self.out_branches:
-            fkeys = [k for k in self.fkeys if k not in self.identifier and k in self.out_branches]
-            return sorted(fkeys)
         fkeys = [k for k in self.fkeys if k not in self.identifier]
         return sorted(fkeys)
 
