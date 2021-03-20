@@ -25,7 +25,7 @@ export PYTHONPATH=$PYTHONPATH:$PWD/MLaaS4HEP/src/python/
 export PATH=$PWD/MLaaS4HEP/bin:$PATH
 ```
 
-download the following two root files to test MLaaS4HEP with local files
+download the following two root files to test MLaaS4HEP with local files in a classification problem
 
 ```
 wget http://opendata.cern.ch/record/12351/files/GluGluToHToTauTau.root
