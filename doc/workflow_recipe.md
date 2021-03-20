@@ -25,7 +25,7 @@ export PYTHONPATH=$PYTHONPATH:$PWD/MLaaS4HEP/src/python/
 export PATH=$PWD/MLaaS4HEP/bin:$PATH
 ```
 
-download two root files to test MLaaS4HEP with local files
+download the following two root files to test MLaaS4HEP with local files
 
 ```
 wget http://opendata.cern.ch/record/12351/files/GluGluToHToTauTau.root
@@ -97,16 +97,16 @@ run the [workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/pytho
 
 This script performs the following actions:
 - read all the ROOT files in chunks to compute the specs file
-- perform the training cycle (each time with a new chunk of events)
-  - create a chunk of events taken proportionally from the input ROOT files
+- perform the training cycle (each time using a new chunk of events)
+  - create a new chunk of events taken proportionally from the input ROOT files
     - extract and convert each event in a list of NumPy arrays
-    - normalize the events, 
+    - normalize the events 
     - fix the Jagged Arrays dimension
-    - create the masking vectors.
+    - create the masking vector
   - use the chunk to train the ML model provided by the user
 
 ## Example of output
-Running workflow.py using the [keras_model.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/MLaaS4HEP/keras_model.py) model and the parameters chosen before, a similar output will be shown
+Running the [workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/MLaaS4HEP/workflow.py) script using the [keras_model.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/MLaaS4HEP/keras_model.py) model and the parameters chosen before, a similar output will be shown
 ```
 ./MLaaS4HEP/src/python/MLaaS4HEP/workflow.py --files=files.txt --labels=labels.txt --model=keras_model.py --params=params.json
 load keras_model.py <function model at 0x7f6c1281c700> Simple Keras model for testing purposes
@@ -122,9 +122,6 @@ Excluded branches: ['run', 'event', 'luminosityBlock']
 ###total time elapsed for reading + specs computing: 1.6907954216003418; number of chunks 5
 ###total time elapsed for reading: 0.4583611488342285; number of chunks 5
 
-###total time elapsed for reading + specs computing: 1.3919589519500732; number of chunks 4
-###total time elapsed for reading: 0.4113757610321045; number of chunks 4
-
 --- first pass: 476963 events, (18-flat, 48-jagged) branches, 1767 attrs
 <MLaaS4HEP.reader.RootDataReader object at 0x7f6c1281e2e0> init is complete in 1.6989874839782715 sec
 Reading VBF_HToTauTau.root
@@ -136,9 +133,6 @@ Excluded branches: ['run', 'event', 'luminosityBlock']
 # 10000 entries, 66 branches, 11.948942184448242 MB, 0.031001806259155273 sec, 385.4272904153625 MB/sec, 322.5618506356177 kHz
 ###total time elapsed for reading + specs computing: 1.8234634399414062; number of chunks 5
 ###total time elapsed for reading: 0.6939854621887207; number of chunks 5
-
-###total time elapsed for reading + specs computing: 1.637481451034546; number of chunks 4
-###total time elapsed for reading: 0.6629846096038818; number of chunks 4
 
 --- first pass: 491653 events, (18-flat, 48-jagged) branches, 1785 attrs
 <MLaaS4HEP.reader.RootDataReader object at 0x7f6c12836d30> init is complete in 1.8325014114379883 sec
