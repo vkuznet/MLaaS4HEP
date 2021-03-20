@@ -10,7 +10,7 @@ conda install pyarrow uproot=3.12 numba scikit-learn
 conda install keras numpy pandas
 ```
 
-create a new working directory and download MLaaS4HEP code
+create a new working directory and download the MLaaS4HEP code
 
 ```
 mkdir work_dir
@@ -25,21 +25,21 @@ export PYTHONPATH=$PYTHONPATH:$PWD/MLaaS4HEP/src/python/
 export PATH=$PWD/MLaaS4HEP/bin:$PATH
 ```
 
-download the following two root files to test MLaaS4HEP with local files in a classification problem
+download the following two ROOT files to test MLaaS4HEP with local files in a classification problem
 
 ```
 wget http://opendata.cern.ch/record/12351/files/GluGluToHToTauTau.root
 wget http://opendata.cern.ch/record/12352/files/VBF_HToTauTau.root
 ```
 
-create a files.txt with the path of the two root files to use
+create a files.txt file with the path of the two input ROOT files to use
 
 ```
 GluGluToHToTauTau.root
 VBF_HToTauTau.root
 ```
 
-create a labels.txt with the class labels
+create a labels.txt file with the class labels
 
 ```
 1
@@ -96,7 +96,7 @@ run the [workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/pytho
 ```
 
 This script performs the following actions:
-- read all the ROOT files in chunks to compute the specs file
+- read all ROOT files in chunks to compute the specs file
 - perform the training cycle (each time using a new chunk of events)
   - create a new chunk of events taken proportionally from the input ROOT files
     - extract and convert each event in a list of NumPy arrays
