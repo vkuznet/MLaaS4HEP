@@ -771,8 +771,9 @@ class RootDataReader(object):
                 if self.verbose:
                     print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:])}; number of chunks {len(self.time_reading_and_specs)}")
                     print(f"###total time elapsed for reading: {sum(self.time_reading[:])}; number of chunks {len(self.time_reading)}\n")
-                    print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:-1])}; number of chunks {len(self.time_reading_and_specs)-1}")
-                    print(f"###total time elapsed for reading: {sum(self.time_reading[:-1])}; number of chunks {len(self.time_reading)-1}\n")
+                    if self.nevts == self.nrows:
+                        print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:-1])}; number of chunks {len(self.time_reading_and_specs)-1}")
+                        print(f"###total time elapsed for reading: {sum(self.time_reading[:-1])}; number of chunks {len(self.time_reading)-1}\n")
                 break
 
         # if we've been asked to read all or zero events we determine
