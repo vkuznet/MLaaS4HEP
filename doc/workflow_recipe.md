@@ -346,3 +346,7 @@ Epoch 5/5
 
 ####Time for training: 5.780688524246216
 ```
+
+The plot of the AUC score will be something like this
+
+![AUC_plot](https://github.com/lgiommi/MLaaS4HEP/blob/production/doc/AUC_open_data.jpg)
