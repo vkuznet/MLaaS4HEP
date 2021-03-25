@@ -1,6 +1,6 @@
 # MLaaS4HEP worflow recipe
 
-Install anaconda, create a new environment and install all the MLaaS4HEP dependencies
+Install anaconda, create a new environment and install all the MLaaS4HEP dependencies. You can also use pip to install the dependencies.
 
 ```
 conda create -n env
