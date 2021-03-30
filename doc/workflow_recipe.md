@@ -1,13 +1,14 @@
 # MLaaS4HEP worflow recipe
 
-Install anaconda, create a new environment and install all the MLaaS4HEP dependencies. You can also use pip to install the dependencies.
+Install anaconda, create a new environment and install all the MLaaS4HEP dependencies.
 
 ```
 conda create -n env
 conda activate env
 conda config --add channels conda-forge
-conda install pyarrow uproot=3.12 numba scikit-learn
-conda install keras numpy pandas
+conda install pyarrow uproot=3.12 numba scikit-learn numpy pandas wget
+pip install tensorflow
+pip install keras
 ```
 
 create a new working directory and download the MLaaS4HEP code
@@ -80,7 +81,7 @@ create the params.json file with other parameters, e.g.
     "epochs": 5,
     "batch_size": 100,
     "identifier": "",
-    "branch": “Events",
+    "branch": "Events",
     "selected_branches": "",
     "exclude_branches": ["run", "event", "luminosityBlock"],
     "hist": "pdfs",
