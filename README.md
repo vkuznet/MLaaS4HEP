@@ -8,11 +8,11 @@
 MLaaS for HEP is a set of Python based modules to support reading HEP data and
 stream them to ML of user choice for training. It consists of three independent layers:
 - data streaming layer to handle remote data,
-  see [reader.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/reader.py)
+  see [reader.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/MLaaS4HEP/reader.py)
 - data training layer to train ML model for given HEP data,
-  see [workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/workflow.py)
+  see [workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/MLaaS4HEP/workflow.py)
 - data inference layer,
-  see [tfaas_client.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/tfaas_client.py)
+  see [tfaas_client.py](https://github.com/vkuznet/TFaaS/blob/master/src/python/tfaas_client.py)
 
 The general architecture of MLaaS4HEP looks like this:
 ![MLaaS4HEP-architecture](https://github.com/vkuznet/MLaaS4HEP/blob/master/images/MLaaS4HEP_arch_gen.png)
@@ -97,14 +97,12 @@ and
 
 ### How to train ML model on HEP ROOT data
 The HEP data are presented in [ROOT](https://root.cern.ch/) data-format.
-The [DataReader](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/reader.py#L188)
+The [DataReader](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/MLaaS4HEP/reader.py#L542)
 class provides access to ROOT files and various APIs to access the HEP data.
 
 A simple workflow example can be found in
-[workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/workflow.py)
-code. It contains two examples, one for PyTorch and another for Keras.  It
-contains two examples (on for PyTorch and another for TF in Keras) and show
-full HEP ML workflow, i.e. it can read remote files and perform the training of
+[workflow.py](https://github.com/vkuznet/MLaaS4HEP/blob/master/src/python/MLaaS4HEP/workflow.py)
+code that executes a full HEP ML workflow, i.e. it can read remote files and perform the training of
 ML models with HEP ROOT files.
 
 
@@ -241,4 +239,4 @@ tfaas_client.py --url=$url --image=/path/file.png --model=ImageModel
 
 ### Citation
 Please use this publication for further citation:
-[http://arxiv.org/abs/1811.04492](http://arxiv.org/abs/1811.04492)
+[DOI: 10.1007/s41781-021-00061-3](https://doi.org/10.1007/s41781-021-00061-3)
