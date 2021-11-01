@@ -23,7 +23,7 @@ reading files from local file system or HDFS, while later (ROOT) format allows
 to read ROOT files from local file system or remote files via xrootd protocol.
 
 The pre-trained models can be easily uploaded to
-[TFaas](https://github.com/vkuznet/TFaaS) inference server for serving them to clients.
+[TFaaS](https://github.com/vkuznet/TFaaS) inference server for serving them to clients.
 
 ### Dependencies
 The MLaaS4HEP relies on third-party libraries to support reading different
