@@ -20,6 +20,7 @@ except ImportError:
 
 # uproot
 try:
+    import uproot
     try:
         # uproot verion 3.X
         from awkward import JaggedArray
@@ -121,7 +122,7 @@ def performance(nevts, tree, data, start_time, end_time, msg=""):
     "helper function to show performance metrics of data read from a given tree"
     try:
         nbytes = sum(x.content.nbytes + x.stops.nbytes \
-                if isinstance(x, JaggedArray) \
+                if isinstance(x, uproot.AsJagged) \
                 else x.nbytes for x in data.values())
         print("# %s entries, %s %sbranches, %s MB, %s sec, %s MB/sec, %s kHz" % \
                 ( \
