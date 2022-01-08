@@ -45,12 +45,6 @@ import numpy as np
 # uproot
 try:
     import uproot
-    try:
-        # uproot verion 3.X
-        from awkward import JaggedArray
-    except ImportError:
-        # uproot verion 2.X
-        from uproot.interp.jagged import JaggedArray
 except ImportError:
     pass
 
