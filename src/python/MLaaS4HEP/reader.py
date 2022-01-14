@@ -631,8 +631,8 @@ class RootDataReader(object):
         self.fkeys = specs['fkeys']
         self.nans = specs['nans']
 
-        self.flat_keys_encoded = sorted([key for key in self.flat_keys()])
-        self.jagged_keys_encoded = sorted([key for key in self.jagged_keys()])
+        self.flat_keys_encoded = [key for key in self.flat_keys()]
+        self.jagged_keys_encoded = [key for key in self.jagged_keys()]
         self.keys = self.flat_keys_encoded + self.jagged_keys_encoded
         self.min_list = [self.minv[key] for key in self.keys]
         self.max_list = [self.maxv[key] for key in self.keys]
