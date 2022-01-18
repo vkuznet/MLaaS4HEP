@@ -557,7 +557,7 @@ class RootDataReader(object):
         self.out_branches = []
         self.identifier = identifier if identifier else ['run', 'event', 'luminosityBlock']
         self.tree = self.istream[branch]
-        self.nrows = self.tree.numentries
+        self.nrows = self.tree.num_entries
         self.nevts = nevts if nevts != -1 else self.nrows
         self.label = label
         self.idx = -1
@@ -656,8 +656,8 @@ class RootDataReader(object):
                     self.out_branches, \
                     step_size=nevts, \
                     library="np")
-        else:
-            self.gen = self.tree.iterate( \
+            else:
+                self.gen = self.tree.iterate( \
                     step_size=nevts, \
                     library='np')
         self.branches = {} # start with fresh dict
