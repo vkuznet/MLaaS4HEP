@@ -2,8 +2,6 @@
 #-*- coding: utf-8 -*-
 #pylint: disable=R0903
 
-#QUANDO PUSHI, RICORDA DI METTERE MLAAS4HEP NEI FROM
-
 """
 File       : workflow.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
@@ -18,7 +16,7 @@ import json
 import argparse
 
 # MLaaS4HEP modules
-from models import train_model
+from MLaaS4HEP.models import train_model
 
 class OptionParser(object):
     "OptionParser class for workflow arguments"
