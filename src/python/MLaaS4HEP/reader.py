@@ -835,7 +835,7 @@ class RootDataReader(object):
 
         # form DataFrame record
         try:
-            rec = [self.branches[key][self.chunk_idx] for key in self.keys]
+            rec = [self.branches[key][self.chunk_idx] for key in self.keys] #accesso ai singoli eventi
         except:
             if len(rec) <= self.chunk_idx:
                 raise Exception("For key='%s' unable to find data at pos=%s while got %s" \
