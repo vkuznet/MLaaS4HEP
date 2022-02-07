@@ -518,6 +518,8 @@ def print_cut(preproc):
                     print('Flat: {}'.format(new[key]['cut']))
             else:
                 print('No cut provided for the new branch: {}'.format(key))
+    else:
+        print("New branch was not provided")
     print('\n')
 
     return "pippo"

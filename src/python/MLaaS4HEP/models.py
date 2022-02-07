@@ -102,9 +102,8 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     if preproc:
         preproc = json.load(open(preproc))
         print_cut(preproc)
-
     if file_type(files) == 'root':
-        gen = RootDataGenerator(files, labels, params, specs)
+        gen = RootDataGenerator(files, labels, params, preproc, specs)
     else:
         gen = MetaDataGenerator(files, labels, params, preproc, dtype)
     epochs = params.get('epochs', 10)

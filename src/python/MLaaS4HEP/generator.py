@@ -177,11 +177,15 @@ class RootDataGenerator(object):
     """
     RootDataGenerator class provides interface to read HEP ROOT files.
     """
-    def __init__(self, fin, labels, params=None, specs=None):
+    def __init__(self, fin, labels, params=None, preproc=None, specs=None):
         "Initialization function for Data Generator"
         time0 = time.time()
         if not params:
             params = {}
+        if preproc:
+            self.preproc = preproc
+        else:
+            self.preproc = None
         # parse given parameters
         nan = params.get('nan', np.nan)
         batch_size = params.get('batch_size', 256)
@@ -257,7 +261,7 @@ class RootDataGenerator(object):
             reader = RootDataReader(fname, branch=branch, identifier=identifier, label=self.labels,\
                     selected_branches=branches, exclude_branches=exclude_branches, \
                     nan=nan, chunk_size=chunk_size, nevts=self.evts, specs=specs, \
-                    redirector=redirector, verbose=verbose)
+                    redirector=redirector, preproc=self.preproc, verbose=verbose)
 
             # build specs for the whole set of root files
             self.global_specs(fname, reader)

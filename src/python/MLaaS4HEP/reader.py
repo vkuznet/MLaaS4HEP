@@ -563,12 +563,16 @@ class RootDataReader(object):
     def __init__(self, fin, branch='Events', selected_branches=None, \
             exclude_branches=None, identifier=None, label=None, \
             chunk_size=1000, nevts=-1, specs=None, nan=np.nan, histograms=False, \
-            redirector='root://cms-xrd-global.cern.ch', verbose=0):
+            redirector='root://cms-xrd-global.cern.ch', preproc=None, verbose=0):
         self.type = self.__class__.__name__
         self.fin = xfile(fin, redirector)
+        if preproc:
+            self.preproc = preproc
+        else:
+            self.preproc = None
         self.verbose = verbose
         if self.verbose:
-            print("Reading {}".format(self.fin))
+            print("\n\nReading {}".format(self.fin))
         self.istream = uproot.open(self.fin)
         self.branches = {}
         self.gen = None
@@ -578,7 +582,6 @@ class RootDataReader(object):
         self.nrows = self.tree.num_entries
         self.nevts = nevts if nevts != -1 else self.nrows
         self.label = label
-        self.idx = -1
         self.chunk_idx = 0
         self.chunk_size = chunk_size if chunk_size < self.nrows else self.nrows
         self.nan = float(nan)
