@@ -18,8 +18,8 @@ import random
 import numpy as np
 
 # MLaaS4HEP modules
-from reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
-from utils import file_type, timestamp, global_cut
+from MLaaS4HEP.reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
+from MLaaS4HEP.utils import file_type, timestamp, global_cut
 
 
 class MetaDataGenerator(object):
