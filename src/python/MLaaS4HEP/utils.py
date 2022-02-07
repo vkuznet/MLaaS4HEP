@@ -22,7 +22,7 @@ except ImportError:
 # uproot
 try:
     import uproot
-    import awkward
+    import awkward as ak
 except ImportError:
     pass
 
