@@ -600,6 +600,86 @@ class RootDataReader(object):
             selected_branches=[elem for elem in selected_branches]
             self.out_branches=[elem for elem in selected_branches]
 
+        if self.preproc:
+
+            self.new_branch = self.preproc['new_branch']
+            self.flat = self.preproc['flat_cut']
+            self.jagged = self.preproc['jagged_cut']
+            self.flat_cut = []
+            self.flat_remove = []
+            self.jagged_cut = []
+            self.jagged_remove = []
+            self.jagged_all = []
+            self.jagged_any = []
+            self.nbranch = []
+            self.new_flat_cut = []
+            self.new_jagged_cut = []
+            self.flat_preproc = []
+            self.total_key = []
+            self.to_remove = []
+            self.aliases_string = ''
+            self.cutted_events = -1
+
+            if self.flat:
+                for key in self.flat.keys():
+                    rem = []
+                    self.flat_cut.append(self.flat[key]['cut'])
+                    rem.extend([key, self.flat[key]['remove']])
+                    self.flat_remove.append(rem)
+
+                self.to_remove += self.flat_remove
+
+            if self.jagged:
+                for key in self.jagged.keys():
+                    rem = []
+                    _ = []
+                    _.extend([self.jagged[key]['cut'], self.jagged[key]['cut_type']])
+                    self.jagged_cut.append(_)
+                    rem.extend([key, self.jagged[key]['remove']])
+                    self.jagged_remove.append(rem)
+
+                self.to_remove += self.jagged_remove
+
+            if self.new_branch:
+                self.nbranch, self.new_flat_cut, self.new_jagged_cut, self.aliases_string, self.to_remove = new_branch_handling(self.tree, self.new_branch, \
+                                                                                                                                self.new_flat_cut, self.new_jagged_cut, self.nbranch, self.to_remove)
+
+            if self.out_branches:
+                self.total_key = self.out_branches + self.nbranch
+            else:
+                self.total_key = self.tree.keys() + self.nbranch
+
+            if self.new_flat_cut:
+                if self.flat_cut:
+                    self.flat_cut = self.flat_cut + self.new_flat_cut
+                else:
+                    self.flat_cut = self.new_flat_cut
+                self.flat_preproc = flat_handling(self.flat_cut)
+
+            else:
+                if self.flat_cut:
+                    self.flat_preproc = flat_handling(self.flat_cut)
+                    #print(self.flat_preproc[0])
+                #else:
+                #    print('No flat cut')
+
+            if self.new_jagged_cut:
+                if self.jagged_cut:
+                    self.jagged_cut = self.jagged_cut + self.new_jagged_cut
+                else:
+                    self.jagged_cut = self.new_jagged_cut
+                self.jagged_all, self.jagged_any = jagged_handling(self.jagged_cut)
+            else:
+                if self.jagged_cut:
+                    self.jagged_all, self.jagged_any = jagged_handling(self.jagged_cut)
+                #else:
+                #print('No jagged cut')
+
+            self.to_remove = [self.to_remove[i][0] for i in range(len(self.to_remove)) if self.to_remove[i][1] == 'True']
+
+        else:
+            self.idx = -1
+
         # perform initialization
         self.init()
         if self.verbose:
