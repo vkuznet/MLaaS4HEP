@@ -987,33 +987,54 @@ class RootDataReader(object):
     def next(self):
         "Provides read interface for next event using vectorize approach"
         self.idx = self.idx + 1
-        # read new chunk of records if necessary
-        if not self.idx % self.chunk_size:
-            if self.idx + self.chunk_size > self.nrows:
-                nevts = self.nrows - self.idx
-            else:
-                nevts = self.chunk_size
-            self.read_chunk(nevts)
-            self.chunk_idx = 0 # reset chunk index after we read the chunk of data
-            self.idx = self.idx - nevts # reset index after chunk read by nevents offset
-            if self.verbose > 1:
-                print("idx", self.idx, "read", nevts, "events")
 
-        # form DataFrame record
+        # read new chunk of records if necessary
+        if self.preproc:
+            if (not self.chunk_idx % self.cutted_events):
+                if self.idx + self.chunk_size > self.nrows:
+                    nevts = self.nrows - self.counter_idx
+                else:
+                    nevts = self.chunk_size
+                self.read_chunk(nevts)
+                self.chunk_idx = 0 # reset chunk index after we read the chunk of data
+                if self.verbose > 1:
+                    print("idx", self.idx, "read", nevts, "events")
+
+        else:
+            if not self.idx % self.chunk_size:
+                if self.idx + self.chunk_size > self.nrows:
+                    nevts = self.nrows - self.idx
+                else:
+                    nevts = self.chunk_size
+                self.read_chunk(nevts)
+                self.chunk_idx = 0 # reset chunk index after we read the chunk of data
+                if self.verbose > 1:
+                    print("idx", self.idx, "read", nevts, "events")
+
         try:
-            rec = [self.branches[key][self.chunk_idx] for key in self.keys] #accesso ai singoli eventi
+            rec = [self.branches[key][self.chunk_idx] for key in self.keys]
+
         except:
             if len(rec) <= self.chunk_idx:
                 raise Exception("For key='%s' unable to find data at pos=%s while got %s" \
-                    % (key, self.chunk_idx, len(self.branches[key])))
+                                % (key, self.chunk_idx, len(self.branches[key])))
             print("failed key", key)
             print("failed idx", self.chunk_idx)
             print("len(fdata)", len(self.branches[key]))
             raise
 
-        # normalise and adjust dimension of the events
-        result = [x1 if x3 == x2 else (x1 - x2) / (x3 - x2) for (x1, x2, x3) in \
-            zip(rec, self.min_list, self.max_list) ]
+        if self.preproc:
+            if not((self.flat != {}) & (self.jagged == {}) & (self.new_branch == {})):
+                rec_2 = [ak.to_numpy(elem) for elem in rec]
+                result = [x1 if x3 == x2 else (x1-x2)/(x3-x2) for (x1, x2, x3) in \
+                          zip(rec_2, self.min_list, self.max_list)]
+            else:
+                result = [x1 if x3 == x2 else (x1-x2)/(x3-x2) for (x1, x2, x3) in \
+                          zip(rec, self.min_list, self.max_list)]
+        else:
+            result = [x1 if x3 == x2 else (x1-x2)/(x3-x2) for (x1, x2, x3) in \
+                      zip(rec, self.min_list, self.max_list) ]
+
         result = [[result[i]] if i < len(self.flat_keys_encoded) else result[i].tolist() \
             if len(result[i]) == self.dimension_list[i] else \
             self.add_dim(result[i], i) for i in range(0, len(result))]
