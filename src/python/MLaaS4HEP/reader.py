@@ -45,6 +45,7 @@ import numpy as np
 # uproot
 try:
     import uproot
+    import awkward as ak
 except ImportError:
     pass
 
@@ -87,6 +88,7 @@ except ImportError:
 # MLaaS4HEP modules
 from utils import nrows, dump_histograms, mem_usage, performance
 from utils import steps, fopen, file_type, load_code
+from utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
 
 class OptionParser(object):
     "Option parser class for reader arguments"
@@ -152,7 +154,23 @@ def min_max_arr(jagged_key, key, arr):
             arr = np.concatenate(arr, axis = 0)
         return float(np.min(arr)), float(np.max(arr))
     except ValueError:
-        return 1e15, -1e15
+        return -1e15, 1e15
+    except TypeError:
+        return -1e15, 1e15
+
+def min_max_arr_ak(jagged_key, key, arr):
+    """
+    Helper function to find out min/max values of given array.
+    The array can be either jagged one or normal numpy.ndarray
+    """
+    try:
+        if key in jagged_key:
+            arr = ak.flatten(arr, axis=1)
+        return float(ak.min(arr)), float(ak.max(arr))
+    except ValueError:
+        return -1e15, 1e15
+    except TypeError:
+        return -1e15, 1e15
 
 class FileReader(object):
     """
