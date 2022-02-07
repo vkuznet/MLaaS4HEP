@@ -18,8 +18,8 @@ import random
 import numpy as np
 
 # MLaaS4HEP modules
-from MLaaS4HEP.reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
-from MLaaS4HEP.utils import file_type, timestamp
+from reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
+from utils import file_type, timestamp, global_cut
 
 
 class MetaDataGenerator(object):
@@ -526,8 +526,16 @@ class RootDataGenerator(object):
 
     def global_specs (self, fname, reader):
         "Function to build specs for the whole set of root files"
-        self.events[fname] = reader.nrows
-        self.events['total'] += reader.nrows
+        if reader.preproc:
+            self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
+                                        reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
+                                        reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
+            print('Cutted events: {}'.format(self.events[fname]))
+            self.events['total'] += self.events[fname]
+        else:
+            self.events[fname] = reader.nrows
+            self.events['total'] += reader.nrows
+
         if fname == self.files[0]:
             self.jdim = reader.jdim
             self.minv = reader.minv
