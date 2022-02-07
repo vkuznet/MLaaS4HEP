@@ -731,43 +731,111 @@ class RootDataReader(object):
         # read some portion of the data to determine branches
         start_time = time.time()
         if not self.gen:
-            if self.out_branches:
-                self.gen = self.tree.iterate( \
-                    self.out_branches, \
-                    step_size=nevts, \
-                    library="np")
+            if self.preproc:
+                self.gen = gen_preproc(self.tree, nevts, self.flat, self.jagged, self.flat_preproc, \
+                                       self.aliases_string, self.new_branch, self.new_flat_cut, self.total_key)
+
             else:
-                self.gen = self.tree.iterate( \
-                    step_size=nevts, \
-                    library='np')
+                if self.out_branches:
+                    self.gen = self.tree.iterate( \
+                        self.out_branches, \
+                        step_size=nevts, \
+                        library="np")
+                else:
+                    self.gen = self.tree.iterate( \
+                        step_size=nevts, \
+                        library="np")
+
         self.branches = {} # start with fresh dict
+
         try:
-            self.branches = next(self.gen) # python 3.X and 2.X
-        except StopIteration:
-            if self.out_branches:
-                self.gen = self.tree.iterate( \
-                    branches=self.out_branches, \
-                    step_size=nevts, \
-                    library='np')
+            if self.preproc:
+                self.branches, self.cutted_events = cutted_next(self.gen, self.flat_preproc, self.jagged, self.jagged_all, \
+                                                                self.jagged_any, self.new_branch, self.new_jagged_cut)
+
             else:
-                self.gen = self.tree.iterate(step_size=nevts, library='np')
-            self.branches = next(self.gen) # python 3.X and 2.X
+                self.branches = next(self.gen) # python 3.X and 2.X
+
+
+        except StopIteration:
+            if self.preproc:
+                self.gen = gen_preproc(self.tree, nevts, self.flat, self.jagged, self.flat_preproc, \
+                                       self.aliases_string, self.new_branch, self.new_flat_cut, self.total_key)
+            else:
+                if self.out_branches:
+                    self.gen = self.tree.iterate( \
+                        branches=self.out_branches, \
+                        step_size=nevts, \
+                        library='np')
+                else:
+                    self.gen = self.tree.iterate(step_size=nevts)
+
+            if self.preproc:
+                self.gen = gen_preproc(self.tree, nevts, self.flat, self.jagged, self.flat_preproc, \
+                                       self.aliases_string, self.new_branch, self.new_flat_cut, self.total_key)
+            else:
+                self.branches = next(self.gen) # python 3.X and 2.X
 
         self.time_reading.append(time.time()-start_time)
+
         end_time = time.time()
-        self.idx += nevts
+
+        if self.to_remove:
+            for elem in self.to_remove:
+                try:
+                    del self.branches[elem]
+                except:
+                    print('Branch {} not found in the branches of the tree.'.format(elem))
+
         if self.verbose:
             performance(nevts, self.tree, self.branches, start_time, end_time)
+
         if set_branches:
-            for key, val in self.branches.items():
-                if isinstance(self.tree[key].interpretation, uproot.AsJagged):
-                    self.jkeys.append(key)
+            if self.preproc:
+                if self.new_branch:
+                    for key, val in self.branches.items():
+                        if key not in self.nbranch:
+                            if isinstance(self.tree[key].interpretation, uproot.AsJagged):
+                                self.jkeys.append(key)
+                            else:
+                                self.fkeys.append(key)
+                        else:
+                            if self.new_branch[key]['type'] == 'jagged':
+                                self.jkeys.append(key)
+                            else:
+                                self.fkeys.append(key)
+                        self.minv[key], self.maxv[key] = min_max_arr_ak(self.jkeys, key, val)
                 else:
-                    self.fkeys.append(key)
-                self.minv[key], self.maxv[key] = min_max_arr(self.jkeys, key, val)
+                    for key, val in self.branches.items():
+                        if isinstance(self.tree[key].interpretation, uproot.AsJagged):
+                            self.jkeys.append(key)
+                        else:
+                            self.fkeys.append(key)
+                        if (self.flat != {}) & (self.jagged == {}):
+                            self.minv[key], self.maxv[key] = min_max_arr(self.jkeys, key, val)
+                        else:
+                            self.minv[key], self.maxv[key] = min_max_arr_ak(self.jkeys, key, val)
+
+            else:
+                for key, val in self.branches.items():
+                    if isinstance(self.tree[key].interpretation, uproot.AsJagged):
+                        self.jkeys.append(key)
+                    else:
+                        self.fkeys.append(key)
+                    self.minv[key], self.maxv[key] = min_max_arr(self.jkeys, key, val)
+
         if set_min_max:
             for key, val in self.branches.items():
-                minv, maxv = min_max_arr(self.jkeys, key, val)
+                if self.preproc:
+                    if self.new_branch:
+                        minv, maxv = min_max_arr_ak(self.jkeys, key, val)
+                    else:
+                        if (self.flat != {}) & (self.jagged == {}):
+                            minv, maxv = min_max_arr(self.jkeys, key, val)
+                        else:
+                            minv, maxv = min_max_arr_ak(self.jkeys, key, val)
+                else:
+                    minv, maxv = min_max_arr(self.jkeys, key, val)
                 if minv < self.minv[key]:
                     self.minv[key] = minv
                 if maxv > self.maxv[key]:
