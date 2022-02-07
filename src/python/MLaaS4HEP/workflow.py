@@ -74,6 +74,9 @@ def main():
     else:
         labels = opts.labels # label name to look-up in data
 
+    if opts.preproc and os.path.isfile(opts.preproc):
+        print('preproc.json provided')
+
     if opts.model:
         train_model(opts.model, files, labels, \
                 preproc=opts.preproc, params=params, specs=specs, \
