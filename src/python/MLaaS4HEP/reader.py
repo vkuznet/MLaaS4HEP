@@ -796,13 +796,6 @@ class RootDataReader(object):
 
         end_time = time.time()
 
-        if self.to_remove:
-            for elem in self.to_remove:
-                try:
-                    del self.branches[elem]
-                except:
-                    print('Branch {} not found in the branches of the tree.'.format(elem))
-
         if self.verbose:
             performance(nevts, self.tree, self.branches, start_time, end_time)
 
@@ -995,6 +988,14 @@ class RootDataReader(object):
                     nevts = self.chunk_size
                 self.read_chunk(nevts)
                 self.chunk_idx = 0 # reset chunk index after we read the chunk of data
+
+                if self.to_remove:
+                    for elem in self.to_remove:
+                        try:
+                            del self.branches[elem]
+                        except:
+                            print('Branch {} not found in the branches of the tree.'.format(elem))
+
                 if self.verbose > 1:
                     print("idx", self.idx, "read", nevts, "events")
 
