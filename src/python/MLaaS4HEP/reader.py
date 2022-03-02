@@ -45,6 +45,7 @@ import numpy as np
 # uproot
 try:
     import uproot
+    import awkward as ak
 except ImportError:
     pass
 
@@ -87,6 +88,7 @@ except ImportError:
 # MLaaS4HEP modules
 from MLaaS4HEP.utils import nrows, dump_histograms, mem_usage, performance
 from MLaaS4HEP.utils import steps, fopen, file_type, load_code
+from MLaaS4HEP.utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
 
 class OptionParser(object):
     "Option parser class for reader arguments"
@@ -152,7 +154,23 @@ def min_max_arr(jagged_key, key, arr):
             arr = np.concatenate(arr, axis = 0)
         return float(np.min(arr)), float(np.max(arr))
     except ValueError:
-        return 1e15, -1e15
+        return -1e15, 1e15
+    except TypeError:
+        return -1e15, 1e15
+
+def min_max_arr_ak(jagged_key, key, arr):
+    """
+    Helper function to find out min/max values of given array.
+    The array can be either jagged one or normal numpy.ndarray
+    """
+    try:
+        if key in jagged_key:
+            arr = ak.flatten(arr, axis=1)
+        return float(ak.min(arr)), float(ak.max(arr))
+    except ValueError:
+        return -1e15, 1e15
+    except TypeError:
+        return -1e15, 1e15
 
 class FileReader(object):
     """
@@ -545,12 +563,16 @@ class RootDataReader(object):
     def __init__(self, fin, branch='Events', selected_branches=None, \
             exclude_branches=None, identifier=None, label=None, \
             chunk_size=1000, nevts=-1, specs=None, nan=np.nan, histograms=False, \
-            redirector='root://cms-xrd-global.cern.ch', verbose=0):
+            redirector='root://cms-xrd-global.cern.ch', preproc=None, verbose=0):
         self.type = self.__class__.__name__
         self.fin = xfile(fin, redirector)
+        if preproc:
+            self.preproc = preproc
+        else:
+            self.preproc = None
         self.verbose = verbose
         if self.verbose:
-            print("Reading {}".format(self.fin))
+            print("\n\nReading {}".format(self.fin))
         self.istream = uproot.open(self.fin)
         self.branches = {}
         self.gen = None
@@ -560,7 +582,6 @@ class RootDataReader(object):
         self.nrows = self.tree.num_entries
         self.nevts = nevts if nevts != -1 else self.nrows
         self.label = label
-        self.idx = -1
         self.chunk_idx = 0
         self.chunk_size = chunk_size if chunk_size < self.nrows else self.nrows
         self.nan = float(nan)
@@ -599,6 +620,81 @@ class RootDataReader(object):
             print(f"Selected branches: {selected_branches}")
             selected_branches=[elem for elem in selected_branches]
             self.out_branches=[elem for elem in selected_branches]
+
+        if self.preproc:
+
+            self.new_branch = self.preproc['new_branch']
+            self.flat = self.preproc['flat_cut']
+            self.jagged = self.preproc['jagged_cut']
+            self.flat_cut = []
+            self.flat_remove = []
+            self.jagged_cut = []
+            self.jagged_remove = []
+            self.jagged_all = []
+            self.jagged_any = []
+            self.nbranch = []
+            self.new_flat_cut = []
+            self.new_jagged_cut = []
+            self.flat_preproc = []
+            self.total_key = []
+            self.to_remove = []
+            self.aliases_string = ''
+            self.cutted_events = -1
+
+            if self.flat:
+                for key in self.flat.keys():
+                    rem = []
+                    self.flat_cut.append(self.flat[key]['cut'])
+                    rem.extend([key, self.flat[key]['remove']])
+                    self.flat_remove.append(rem)
+
+                self.to_remove += self.flat_remove
+
+            if self.jagged:
+                for key in self.jagged.keys():
+                    rem = []
+                    _ = []
+                    _.extend([self.jagged[key]['cut'], self.jagged[key]['cut_type']])
+                    self.jagged_cut.append(_)
+                    rem.extend([key, self.jagged[key]['remove']])
+                    self.jagged_remove.append(rem)
+
+                self.to_remove += self.jagged_remove
+
+            if self.new_branch:
+                self.nbranch, self.new_flat_cut, self.new_jagged_cut, self.aliases_string, self.to_remove = new_branch_handling(self.tree, self.new_branch, \
+                                                                                                                                self.new_flat_cut, self.new_jagged_cut, self.nbranch, self.to_remove)
+
+            if self.out_branches:
+                self.total_key = self.out_branches + self.nbranch
+            else:
+                self.total_key = self.tree.keys() + self.nbranch
+
+            if self.new_flat_cut:
+                if self.flat_cut:
+                    self.flat_cut = self.flat_cut + self.new_flat_cut
+                else:
+                    self.flat_cut = self.new_flat_cut
+                self.flat_preproc = flat_handling(self.flat_cut)
+
+            else:
+                if self.flat_cut:
+                    self.flat_preproc = flat_handling(self.flat_cut)
+
+            if self.new_jagged_cut:
+                if self.jagged_cut:
+                    self.jagged_cut = self.jagged_cut + self.new_jagged_cut
+                else:
+                    self.jagged_cut = self.new_jagged_cut
+                self.jagged_all, self.jagged_any = jagged_handling(self.jagged_cut)
+            else:
+                if self.jagged_cut:
+                    self.jagged_all, self.jagged_any = jagged_handling(self.jagged_cut)
+
+            self.to_remove = [self.to_remove[i][0] for i in range(len(self.to_remove)) if self.to_remove[i][1] == 'True']
+
+        else:
+            self.idx = -1
 
         # perform initialization
         self.init()
@@ -651,43 +747,104 @@ class RootDataReader(object):
         # read some portion of the data to determine branches
         start_time = time.time()
         if not self.gen:
-            if self.out_branches:
-                self.gen = self.tree.iterate( \
-                    self.out_branches, \
-                    step_size=nevts, \
-                    library="np")
+            if self.preproc:
+                self.gen = gen_preproc(self.tree, nevts, self.flat, self.jagged, self.flat_preproc, \
+                                       self.aliases_string, self.new_branch, self.new_flat_cut, self.total_key)
+
             else:
-                self.gen = self.tree.iterate( \
-                    step_size=nevts, \
-                    library='np')
+                if self.out_branches:
+                    self.gen = self.tree.iterate( \
+                        self.out_branches, \
+                        step_size=nevts, \
+                        library="np")
+                else:
+                    self.gen = self.tree.iterate( \
+                        step_size=nevts, \
+                        library="np")
+
         self.branches = {} # start with fresh dict
+
         try:
-            self.branches = next(self.gen) # python 3.X and 2.X
-        except StopIteration:
-            if self.out_branches:
-                self.gen = self.tree.iterate( \
-                    branches=self.out_branches, \
-                    step_size=nevts, \
-                    library='np')
+            if self.preproc:
+                self.branches, self.cutted_events = cutted_next(self.gen, self.flat_preproc, self.jagged, self.jagged_all, \
+                                                                self.jagged_any, self.new_branch, self.new_jagged_cut)
+
             else:
-                self.gen = self.tree.iterate(step_size=nevts, library='np')
-            self.branches = next(self.gen) # python 3.X and 2.X
+                self.branches = next(self.gen) # python 3.X and 2.X
+
+
+        except StopIteration:
+            if self.preproc:
+                self.gen = gen_preproc(self.tree, nevts, self.flat, self.jagged, self.flat_preproc, \
+                                       self.aliases_string, self.new_branch, self.new_flat_cut, self.total_key)
+            else:
+                if self.out_branches:
+                    self.gen = self.tree.iterate( \
+                        branches=self.out_branches, \
+                        step_size=nevts, \
+                        library='np')
+                else:
+                    self.gen = self.tree.iterate(step_size=nevts)
+
+            if self.preproc:
+                self.gen = gen_preproc(self.tree, nevts, self.flat, self.jagged, self.flat_preproc, \
+                                       self.aliases_string, self.new_branch, self.new_flat_cut, self.total_key)
+            else:
+                self.branches = next(self.gen) # python 3.X and 2.X
 
         self.time_reading.append(time.time()-start_time)
+
         end_time = time.time()
-        self.idx += nevts
+
         if self.verbose:
             performance(nevts, self.tree, self.branches, start_time, end_time)
+
         if set_branches:
-            for key, val in self.branches.items():
-                if isinstance(self.tree[key].interpretation, uproot.AsJagged):
-                    self.jkeys.append(key)
+            if self.preproc:
+                if self.new_branch:
+                    for key, val in self.branches.items():
+                        if key not in self.nbranch:
+                            if isinstance(self.tree[key].interpretation, uproot.AsJagged):
+                                self.jkeys.append(key)
+                            else:
+                                self.fkeys.append(key)
+                        else:
+                            if self.new_branch[key]['type'] == 'jagged':
+                                self.jkeys.append(key)
+                            else:
+                                self.fkeys.append(key)
+                        self.minv[key], self.maxv[key] = min_max_arr_ak(self.jkeys, key, val)
                 else:
-                    self.fkeys.append(key)
-                self.minv[key], self.maxv[key] = min_max_arr(self.jkeys, key, val)
+                    for key, val in self.branches.items():
+                        if isinstance(self.tree[key].interpretation, uproot.AsJagged):
+                            self.jkeys.append(key)
+                        else:
+                            self.fkeys.append(key)
+                        if (self.flat != {}) & (self.jagged == {}):
+                            self.minv[key], self.maxv[key] = min_max_arr(self.jkeys, key, val)
+                        else:
+                            self.minv[key], self.maxv[key] = min_max_arr_ak(self.jkeys, key, val)
+
+            else:
+                for key, val in self.branches.items():
+                    if isinstance(self.tree[key].interpretation, uproot.AsJagged):
+                        self.jkeys.append(key)
+                    else:
+                        self.fkeys.append(key)
+                    self.minv[key], self.maxv[key] = min_max_arr(self.jkeys, key, val)
+
         if set_min_max:
             for key, val in self.branches.items():
-                minv, maxv = min_max_arr(self.jkeys, key, val)
+                if self.preproc:
+                    if self.new_branch:
+                        minv, maxv = min_max_arr_ak(self.jkeys, key, val)
+                    else:
+                        if (self.flat != {}) & (self.jagged == {}):
+                            minv, maxv = min_max_arr(self.jkeys, key, val)
+                        else:
+                            minv, maxv = min_max_arr_ak(self.jkeys, key, val)
+                else:
+                    minv, maxv = min_max_arr(self.jkeys, key, val)
                 if minv < self.minv[key]:
                     self.minv[key] = minv
                 if maxv > self.maxv[key]:
@@ -821,33 +978,62 @@ class RootDataReader(object):
     def next(self):
         "Provides read interface for next event using vectorize approach"
         self.idx = self.idx + 1
-        # read new chunk of records if necessary
-        if not self.idx % self.chunk_size:
-            if self.idx + self.chunk_size > self.nrows:
-                nevts = self.nrows - self.idx
-            else:
-                nevts = self.chunk_size
-            self.read_chunk(nevts)
-            self.chunk_idx = 0 # reset chunk index after we read the chunk of data
-            self.idx = self.idx - nevts # reset index after chunk read by nevents offset
-            if self.verbose > 1:
-                print("idx", self.idx, "read", nevts, "events")
 
-        # form DataFrame record
+        # read new chunk of records if necessary
+        if self.preproc:
+            if (not self.chunk_idx % self.cutted_events):
+                if self.idx + self.chunk_size > self.nrows:
+                    nevts = self.nrows - self.counter_idx
+                else:
+                    nevts = self.chunk_size
+                self.read_chunk(nevts)
+                self.chunk_idx = 0 # reset chunk index after we read the chunk of data
+
+                if self.to_remove:
+                    for elem in self.to_remove:
+                        try:
+                            del self.branches[elem]
+                        except:
+                            print('Branch {} not found in the branches of the tree.'.format(elem))
+
+                if self.verbose > 1:
+                    print("idx", self.idx, "read", nevts, "events")
+
+        else:
+            if not self.idx % self.chunk_size:
+                if self.idx + self.chunk_size > self.nrows:
+                    nevts = self.nrows - self.idx
+                else:
+                    nevts = self.chunk_size
+                self.read_chunk(nevts)
+                self.chunk_idx = 0 # reset chunk index after we read the chunk of data
+                if self.verbose > 1:
+                    print("idx", self.idx, "read", nevts, "events")
+
         try:
             rec = [self.branches[key][self.chunk_idx] for key in self.keys]
+
         except:
             if len(rec) <= self.chunk_idx:
                 raise Exception("For key='%s' unable to find data at pos=%s while got %s" \
-                    % (key, self.chunk_idx, len(self.branches[key])))
+                                % (key, self.chunk_idx, len(self.branches[key])))
             print("failed key", key)
             print("failed idx", self.chunk_idx)
             print("len(fdata)", len(self.branches[key]))
             raise
 
-        # normalise and adjust dimension of the events
-        result = [x1 if x3 == x2 else (x1 - x2) / (x3 - x2) for (x1, x2, x3) in \
-            zip(rec, self.min_list, self.max_list) ]
+        if self.preproc:
+            if not((self.flat != {}) & (self.jagged == {}) & (self.new_branch == {})):
+                rec_2 = [ak.to_numpy(elem) for elem in rec]
+                result = [x1 if x3 == x2 else (x1-x2)/(x3-x2) for (x1, x2, x3) in \
+                          zip(rec_2, self.min_list, self.max_list)]
+            else:
+                result = [x1 if x3 == x2 else (x1-x2)/(x3-x2) for (x1, x2, x3) in \
+                          zip(rec, self.min_list, self.max_list)]
+        else:
+            result = [x1 if x3 == x2 else (x1-x2)/(x3-x2) for (x1, x2, x3) in \
+                      zip(rec, self.min_list, self.max_list) ]
+
         result = [[result[i]] if i < len(self.flat_keys_encoded) else result[i].tolist() \
             if len(result[i]) == self.dimension_list[i] else \
             self.add_dim(result[i], i) for i in range(0, len(result))]

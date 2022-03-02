@@ -16,7 +16,7 @@ from __future__ import print_function, division, absolute_import
 
 # system modules
 import time
-
+import json
 # numpy modules
 import numpy as np
 
@@ -34,7 +34,7 @@ except ImportError:
 
 # MLaaS4HEP modules
 from MLaaS4HEP.generator import RootDataGenerator, MetaDataGenerator, file_type
-from MLaaS4HEP.utils import load_code
+from MLaaS4HEP.utils import load_code, print_cut
 
 class Trainer(object):
     """
@@ -100,9 +100,10 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         specs = {}
     model = load_code(model, 'model')
     if preproc:
-        preproc = load_code(preproc, 'preprocessing')
+        preproc = json.load(open(preproc))
+        print_cut(preproc)
     if file_type(files) == 'root':
-        gen = RootDataGenerator(files, labels, params, specs)
+        gen = RootDataGenerator(files, labels, params, preproc, specs)
     else:
         gen = MetaDataGenerator(files, labels, params, preproc, dtype)
     epochs = params.get('epochs', 10)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 #pylint: disable=R0903
+
 """
 File       : workflow.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
@@ -72,6 +73,9 @@ def main():
         labels = opts.labels.split(',')
     else:
         labels = opts.labels # label name to look-up in data
+
+    if opts.preproc and os.path.isfile(opts.preproc):
+        print('preproc.json provided')
 
     if opts.model:
         train_model(opts.model, files, labels, \

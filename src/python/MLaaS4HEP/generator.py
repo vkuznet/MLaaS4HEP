@@ -19,7 +19,7 @@ import numpy as np
 
 # MLaaS4HEP modules
 from MLaaS4HEP.reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
-from MLaaS4HEP.utils import file_type, timestamp
+from MLaaS4HEP.utils import file_type, timestamp, global_cut
 
 
 class MetaDataGenerator(object):
@@ -177,11 +177,15 @@ class RootDataGenerator(object):
     """
     RootDataGenerator class provides interface to read HEP ROOT files.
     """
-    def __init__(self, fin, labels, params=None, specs=None):
+    def __init__(self, fin, labels, params=None, preproc=None, specs=None):
         "Initialization function for Data Generator"
         time0 = time.time()
         if not params:
             params = {}
+        if preproc:
+            self.preproc = preproc
+        else:
+            self.preproc = None
         # parse given parameters
         nan = params.get('nan', np.nan)
         batch_size = params.get('batch_size', 256)
@@ -257,7 +261,7 @@ class RootDataGenerator(object):
             reader = RootDataReader(fname, branch=branch, identifier=identifier, label=self.labels,\
                     selected_branches=branches, exclude_branches=exclude_branches, \
                     nan=nan, chunk_size=chunk_size, nevts=self.evts, specs=specs, \
-                    redirector=redirector, verbose=verbose)
+                    redirector=redirector, preproc=self.preproc, verbose=verbose)
 
             # build specs for the whole set of root files
             self.global_specs(fname, reader)
@@ -526,8 +530,16 @@ class RootDataGenerator(object):
 
     def global_specs (self, fname, reader):
         "Function to build specs for the whole set of root files"
-        self.events[fname] = reader.nrows
-        self.events['total'] += reader.nrows
+        if reader.preproc:
+            self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
+                                        reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
+                                        reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
+            print('Cutted events: {}'.format(self.events[fname]))
+            self.events['total'] += self.events[fname]
+        else:
+            self.events[fname] = reader.nrows
+            self.events['total'] += reader.nrows
+
         if fname == self.files[0]:
             self.jdim = reader.jdim
             self.minv = reader.minv
