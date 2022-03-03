@@ -118,17 +118,17 @@ def performance(nevts, tree, data, start_time, end_time, msg=""):
     "helper function to show performance metrics of data read from a given tree"
     try:
         nbytes = sum(x.content.nbytes + x.stops.nbytes \
-                if isinstance(x, uproot.AsJagged) \
-                else x.nbytes for x in data.values())
+                         if isinstance(x, uproot.AsJagged) \
+                         else x.nbytes for x in data.values())
         print("# %s entries, %s %sbranches, %s MB, %s sec, %s MB/sec, %s kHz" % \
-                ( \
-            nevts, \
-            len(data), \
-            msg, \
-            nbytes / 1024**2, \
-            end_time - start_time, \
-            nbytes / 1024**2 / (end_time - start_time), \
-            nevts / (end_time - start_time) / 1000))
+              ( \
+                  nevts, \
+                  len(data), \
+                  msg, \
+                  round(nbytes / 1024**2, 3), \
+                  round(end_time - start_time, 3), \
+                  round(nbytes / 1024**2 / (end_time - start_time), 3), \
+                  round(nevts / (end_time - start_time) / 1000, 3)))
     except Exception as exc:
         print(str(exc))
 
@@ -168,37 +168,79 @@ def file_type(fin):
     return None
 
 def flat_handling(cut):
-    "Handling the flat cut(s) in  preproc.json"
+
+    "Handling the flat cut(s) in preproc.json"
+
     cut_string = ''
     branch_name = ''
     global_string = ''
-    op = ["==", ">", "!=", "<"]
+    op = ["==", ">=", "<=", "!=", ">", "<"]
 
     for i in range(0, len(cut)):
 
-        for symbol in op:
-            if cut[i].find(symbol) != -1:
-                x = cut[i].partition(symbol)
+        for symbols in op:
+            if cut[i].find(symbols) != -1:
+                #print(cut[i])
+                x = cut[i].partition(symbols)
                 x_name, x_cond, x_num = x[0], x[1], x[2]
+                #print(x_name, x_cond, x_num)
+
+                x_name_lower = x_name.lower()
+                name_or_number = x_name_lower.islower()
+                if not name_or_number:
+                    for symbols in op:
+                        if x_num.find(symbols) != -1:
+                            y = x_num.partition(symbols)
+                            y_name, y_cond, y_num = y[0], y[1], y[2]
+                            #print(y_name, y_cond, y_num)
+                            break
+                    if i == 0:
+                        branch_name = y_name
+                        if x_cond == '<=':
+                            cut_string += str('(' + y_name + '>=' + x_name + ') & (' + y_name + y_cond + y_num + ')')
+                        else:
+                            cut_string += str('(' + y_name + '>' + x_name + ') & (' + y_name + y_cond + y_num + ')')
+                    else:
+                        if x_cond == '<=':
+                            cut_string += str(' & (' + y_name + '>=' + x_name + ') & (' + y_name + y_cond + y_num + ')')
+                        else:
+                            cut_string += str(' & (' + y_name + '>' + x_name + ') & (' + y_name + y_cond + y_num + ')')
+
+                    if x_cond == '<=':
+                        if global_string == '':
+                            global_string += str('(tree["' + y_name + '"].array()>=' + x_name + ') & (tree["' + y_name + '"].array()' + y_cond + y_num + ')')
+                        else:
+                            global_string += str(' & (tree["' + y_name + '"].array()>=' + x_name + ') & (tree["' + y_name + '"].array()' + y_cond + y_num + ')')
+                    else:
+                        if global_string == '':
+                            global_string += str('(tree["' + y_name + '"].array()>' + x_name + ') & (tree["' + y_name + '"].array()' + y_cond + y_num + ')')
+                        else:
+                            global_string += str(' & (tree["' + y_name + '"].array()>' + x_name + ') & (tree["' + y_name + '"].array()' + y_cond + y_num + ')')
+
+                else:
+                    if i == 0:
+                        branch_name = x_name
+                        cut_string += str('(' + cut[i] + ')')
+                    else:
+                        cut_string += str(' & (' + cut[i] + ')')
+
+                    if global_string == '':
+                        global_string += str('(tree["' + x_name + '"].array()' + x_cond + x_num + ')')
+                    else:
+                        global_string += str(' & (tree["' + x_name + '"].array()' + x_cond + x_num + ')')
+                break
+
             else:
                 continue
-
-            if (global_string == ''):
-                global_string += str('(reader.tree["' + x_name + '"].array()' + x_cond + x_num + ')')
-            else:
-                global_string += str(' & (reader.tree["' + x_name + '"].array()' + x_cond + x_num + ')')
-
-        if i == 0:
-            branch_name = x[0]
-            cut_string += str('(' + cut[i] + ')')
-        else:
-            cut_string += str(' & (' + cut[i] + ')')
 
     flat_cut = [cut_string, global_string, branch_name]
 
     return flat_cut
 
+
 def jagged_handling(jagged):
+
+    "Handling the jagged cut(s) in preproc.json"
 
     all_str = 'all'
     cut_all = ''
@@ -208,10 +250,8 @@ def jagged_handling(jagged):
     op = ["==", ">", "!=", '<']
     jagged_all = []
     jagged_any = []
-    cut_str = ''
-    for i in range(0, len(jagged)):
-        cut_str += str('(' + jagged[i][0] + ')' + ' using ' + '"' + jagged[i][1] + '"' + '\n')
 
+    for i in range(0, len(jagged)):
         for symbol in op:
             if jagged[i][0].find(symbol) != -1:
                 x = jagged[i][0].partition(symbol)
@@ -221,24 +261,24 @@ def jagged_handling(jagged):
 
             if jagged[i][1] == all_str:
                 if cut_all == '':
-                    cut_all += str('(batch["' + x_name + '"]' + x_cond + x_num + ')')
+                    cut_all += str('(ak.all(batch["' + x_name + '"]' + x_cond + x_num + ', axis=1))')
                 else:
-                    cut_all += str(' & (batch["' + x_name + '"]' + x_cond + x_num + ')')
+                    cut_all += str(' & (ak.all(batch["' + x_name + '"]' + x_cond + x_num + ', axis=1))')
                 if global_all == '':
-                    global_all += str('(tree["' + x_name + '"].array()' + x_cond + x_num + ')')
+                    global_all += str('(ak.all(tree["' + x_name + '"].array()' + x_cond + x_num + ', axis=1))')
                 else:
-                    global_all += str(' & (tree["' + x_name + '"].array()' + x_cond + x_num + ')')
+                    global_all += str(' & (ak.all(tree["' + x_name + '"].array()' + x_cond + x_num + ', axis=1))')
 
             else:
                 if cut_any == '':
-                    cut_any += str('(batch["' + x_name + '"]' + x_cond + x_num + ')')
+                    cut_any += str('(ak.any(batch["' + x_name + '"]' + x_cond + x_num + ', axis=1))')
                 else:
-                    cut_any += str(' & (batch["' + x_name + '"]' + x_cond + x_num + ')')
+                    cut_any += str(' & (ak.any(batch["' + x_name + '"]' + x_cond + x_num + ', axis=1))')
 
                 if global_any == '':
-                    global_any += str('(tree["' + x_name + '"].array()' + x_cond + x_num + ')')
+                    global_any += str('(ak.any(tree["' + x_name + '"].array()' + x_cond + x_num + ', axis=1))')
                 else:
-                    global_any += str(' & (tree["' + x_name + '"].array()' + x_cond + x_num + ')')
+                    global_any += str(' & (ak.any(tree["' + x_name + '"].array()' + x_cond + x_num + ', axis=1))')
 
     if cut_all != '':
         jagged_all.append(cut_all)
@@ -253,41 +293,48 @@ def jagged_handling(jagged):
 
 def new_branch_handling(tree, new_branch, new_flat_cut, new_jagged_cut, nbranch, to_remove):
 
+    "Handling the new branches in preproc.json"
+
     op_branch = []
     type_branch = []
     new_branch_remove = []
 
     for key in new_branch.keys():
 
-        #nome nuovo branch
         nbranch.append(key)
-        #come è definito
         op_branch.append(new_branch[key]['def'])
-        #se è jagged o flat
         type_branch.append(new_branch[key]['type'])
 
-        #se il new branch è jagged, metto in new_j_cut una lista contenente [taglio, all/any]
-        if new_branch[key]['cut']:
-            if new_branch[key]['type'] == "jagged":
-                _ = []
-                _.extend([new_branch[key]['cut'], new_branch[key]['cut_type']])
-                new_jagged_cut.append(_)
+        for elem in new_branch[key]:
+            if elem.startswith("cut"):
+                if new_branch[key]['type'] == "jagged":
+                    new_branch[key][elem] = [x.replace(" ", "") for x in new_branch[key][elem]]
+                    new_jagged_cut.append(new_branch[key][elem])
 
-            #altrimenti appendo a new_f_cut  i tagli semplici
-            else:
-                new_flat_cut.append(new_branch[key]['cut'])
+                else:
+                    new_branch[key][elem] = new_branch[key][elem].replace(" ", "")
+                    new_flat_cut.append(new_branch[key][elem])
 
-        #metto dentro la lista new_branch_remove delle liste contenenti [nome, true/false]
+            if elem.startswith("keys_to_"):
+                rem_2 = []
+                for elem in new_branch[key]['keys_to_remove']:
+                    _ = []
+                    _.extend([elem, "True"])
+                    rem_2.append(_)
+
+                for elem in rem_2:
+                    if elem not in to_remove:
+                        new_branch_remove.append(elem)
+                    else:
+                        continue
+
         rem = []
         rem.extend([key, new_branch[key]['remove']])
         new_branch_remove.append(rem)
 
     to_remove += new_branch_remove
 
-
     aliases_string = aliases_func(nbranch, op_branch)
-
-    total_key = tree.keys() + nbranch
 
     return nbranch, new_flat_cut, new_jagged_cut, aliases_string, to_remove
 
@@ -357,17 +404,18 @@ def cutted_next(gen, flat_preproc, jagged, jagged_all, jagged_any, new_branch, n
     return branches, cutted_evts
 
 def if_jagged_cut(batch, jagged_all, jagged_any):
+
     if jagged_all:
         if jagged_any:
-            cutted_batch = batch[(ak.all(eval(jagged_all[0]), axis=1)) & ak.any(eval(jagged_any[0]), axis=1)]
+            cutted_batch = batch[eval(jagged_all[0]) & eval(jagged_any[0])]
             cutted_evts = len(cutted_batch)
 
         else:
-            cutted_batch = batch[(ak.all(eval(jagged_all[0]), axis=1))]
+            cutted_batch = batch[eval(jagged_all[0])]
             cutted_evts = len(cutted_batch)
 
     else:
-        cutted_batch = batch[ak.any(eval(jagged_any[0]), axis=1)]
+        cutted_batch = batch[eval(jagged_any[0])]
         cutted_evts = len(cutted_batch)
 
     return cutted_batch, cutted_evts
@@ -382,7 +430,7 @@ def global_cut(tree, flat, flat_preproc, jagged, jagged_all, jagged_any, new_bra
         else:
             tot_cutted_evts = jagged_global(tree, flat_preproc, jagged_all, jagged_any, reader)
 
-    #se ci sono jagged ma non flat
+    #jagged and not flat
     elif (jagged != {}) & (flat == {}):
         if new_branch:
             if new_flat_cut:
@@ -394,7 +442,7 @@ def global_cut(tree, flat, flat_preproc, jagged, jagged_all, jagged_any, new_bra
         else:
             tot_cutted_evts = jagged_global(tree, flat_preproc, jagged_all, jagged_any, reader)
 
-    #se ci sono flat ma non jagged
+    #flat and not jagged
     elif (flat != {}) & (jagged == {}):
         if new_branch:
             new_gen = tree.iterate(total_key, cut=flat_preproc[0], step_size=100000, aliases=eval(aliases_string), library='ak')
@@ -405,7 +453,7 @@ def global_cut(tree, flat, flat_preproc, jagged, jagged_all, jagged_any, new_bra
         else:
             tot_cutted_evts = np.count_nonzero((eval(flat_preproc[1])))
 
-    #no flat e no jagged
+    #no flat and no jagged
     else:
         if new_branch:
             if new_flat_cut:
@@ -432,94 +480,121 @@ def global_cut(tree, flat, flat_preproc, jagged, jagged_all, jagged_any, new_bra
 def new_jagged_global(new_gen, jagged_all, jagged_any, reader):
 
     cutted_counter = 0
-    n_batch = 0
+
     for batch in new_gen:
-        len_batch = len(batch)
         if (jagged_all != []) & (jagged_any != []):
-            cutted_batch = batch[(ak.all(eval(jagged_all[0]), axis=1)) & (ak.any(eval(jagged_any[0]), axis=1))]
+            cutted_batch = batch[eval(jagged_all[0]) & eval(jagged_any[0])]
         elif (jagged_all != []) & (jagged_any == []):
-            cutted_batch = batch[ak.all(eval(jagged_all[0]), axis=1)]
+            cutted_batch = batch[eval(jagged_all[0])]
         else:
-            cutted_batch = batch[ak.any(eval(jagged_any[0]), axis=1)]
+            cutted_batch = batch[eval(jagged_any[0])]
         cutted_evts = len(cutted_batch)
-        #print("{} - {} = {} eventi non superano il taglio".format(len_batch, cutted_evts, len_batch - cutted_evts))
+
         cutted_counter += cutted_evts
-        n_batch += 1
-        #print("batch numero {}".format(n_batch))
+
     tot_cutted_evts = cutted_counter
 
     return tot_cutted_evts
 
 def jagged_global(tree, flat_preproc, jagged_all, jagged_any, reader):
 
-    if flat_preproc:
+    if flat_preproc != []:
         if (jagged_all != []) & (jagged_any != []):
-            tot_cutted_evts = np.count_nonzero((eval(flat_preproc[1])) & ak.all(eval(jagged_all[1]), axis=1) & ak.any(eval(jagged_any[1]), axis=1))
+            tot_cutted_evts = np.count_nonzero(eval(flat_preproc[1]) & eval(jagged_all[1]) & eval(jagged_any[1]))
         elif (jagged_all != []) & (jagged_any == []):
-            tot_cutted_evts = np.count_nonzero((eval(flat_preproc[1])) & ak.all(eval(jagged_all[1]), axis=1))
+            tot_cutted_evts = np.count_nonzero(eval(flat_preproc[1]) & eval(jagged_all[1]))
         else:
-            tot_cutted_evts = np.count_nonzero((eval(flat_preproc[1])) & ak.any(eval(jagged_any[1]), axis=1))
+            tot_cutted_evts = np.count_nonzero((eval(flat_preproc[1])) & eval(jagged_any[1]))
     else:
         if (jagged_all != []) & (jagged_any != []):
-            tot_cutted_evts = np.count_nonzero(ak.all(eval(jagged_all[1]), axis=1) & ak.any(eval(jagged_any[1]), axis=1))
+            tot_cutted_evts = np.count_nonzero(eval(jagged_all[1]) & eval(jagged_any[1]))
         elif (jagged_all != []) & (jagged_any == []):
-            tot_cutted_evts = np.count_nonzero(ak.all(eval(jagged_all[1]), axis=1))
+            tot_cutted_evts = np.count_nonzero(eval(jagged_all[1]))
         else:
-            tot_cutted_evts = np.count_nonzero(ak.any(eval(jagged_any[1]), axis=1))
+            tot_cutted_evts = np.count_nonzero(eval(jagged_any[1]))
 
     return tot_cutted_evts
 
 def flat_global(new_gen, reader):
 
     cutted_counter = 0
-    n_batch = 0
     for batch in new_gen:
         len_batch = len(batch)
         cutted_counter += len_batch
-        n_batch += 1
-        #print("batch numero {}".format(n_batch))
     tot_cutted_evts = cutted_counter
 
     return tot_cutted_evts
 
 def print_cut(preproc):
 
-    flat = preproc['flat_cut']
-    jagged = preproc['jagged_cut']
-    new = preproc['new_branch']
+    new_bool = False
+    flat_bool = False
+    jagged_bool = False
+
+    for elem in preproc.keys():
+        if elem.startswith("new_"):
+            new = preproc['new_branch']
+            new_bool = True
+
+        if elem.startswith("flat_"):
+            flat = preproc['flat_cut']
+            flat_bool = True
+
+        if elem.startswith("jagged_"):
+            jagged = preproc['jagged_cut']
+            jagged_bool = True
+
+    if new_bool == False:
+        new = {}
+    if flat_bool == False:
+        flat = {}
+    if jagged_bool == False:
+        jagged = {}
 
     print('\n')
 
     if flat != {}:
-        print("Cut(s) provided on flat branch(es):")
+        print("# Cut(s) provided on flat branch(es):")
         for key in flat.keys():
-            print(flat[key]['cut'])
+            for elem in flat[key]:
+                if elem.startswith("cut"):
+                    print(flat[key][elem])
+                else:
+                    break
     else:
-        print('No cut on flat branches was provided')
+        print('# No cut on flat branches was provided')
 
     if jagged != {}:
-        print("Cut(s) provided on jagged branch(es):")
+        print("# Cut(s) provided on jagged branch(es):")
         for key in jagged.keys():
-            print('{} using "{}"'.format(jagged[key]['cut'], jagged[key]['cut_type']))
+            for elem in jagged[key]:
+                if elem.startswith("cut"):
+                    print('{} using "{}"'.format(jagged[key][elem][0], jagged[key][elem][1]))
+                else:
+                    break
     else:
-        print('No cut on jagged branches was provided')
+        print('# No cut on jagged branches was provided')
 
     if new != {}:
-        print("Definition(s) of new branch(es): ")
+        print("# Definition(s) of new branch(es): ")
         for key in new.keys():
             print('{}: {}'.format(key, new[key]['def']))
-
-        print("Cut(s) provided on new branch(es):")
+        print("# Cut(s) on new branch(es):")
         for key in new.keys():
-            if new[key]['cut']:
-                if new[key]['type'] == "jagged":
-                    print('Jagged: {} using "{}"'.format(new[key]['cut'], new[key]['cut_type']))
+            gatsu = 0
+            for elem in new[key]:
+                if elem.startswith("cut"):
+                    if new[key]['type'] == "jagged":
+                        print('{} using "{}"'.format(new[key][elem][0], new[key][elem][1]))
+                    else:
+                        print('{}'.format(new[key][elem]))
+                    gatsu += 1
                 else:
-                    print('Flat: {}'.format(new[key]['cut']))
-            else:
-                print('No cut provided for the new branch: {}'.format(key))
+                    continue
+            if gatsu == 0:
+                print("No cut(s) on {}".format(key))
     else:
-        print("New branch was not provided")
-    print('\n')
+        print('# No new branch was provided')
 
+    print('\n')
     return "pippo"
