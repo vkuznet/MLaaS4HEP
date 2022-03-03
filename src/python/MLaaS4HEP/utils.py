@@ -64,7 +64,7 @@ def load_code(mfile, fname):
     try:
         mod = __import__(mname, fromlist=['model'])
         func = getattr(mod, fname)
-        print("load {} {} {}".format(mfile, func, func.__doc__))
+        #print("load {} {} {}".format(mfile, func, func.__doc__))
         return func
     except ImportError:
         traceback.print_exc()

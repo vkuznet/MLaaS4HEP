@@ -86,9 +86,9 @@ except ImportError:
     pyarrow = None
 
 # MLaaS4HEP modules
-from MLaaS4HEP.utils import nrows, dump_histograms, mem_usage, performance
-from MLaaS4HEP.utils import steps, fopen, file_type, load_code
-from MLaaS4HEP.utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
+from utils import nrows, dump_histograms, mem_usage, performance
+from utils import steps, fopen, file_type, load_code
+from utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
 
 class OptionParser(object):
     "Option parser class for reader arguments"
@@ -731,8 +731,8 @@ class RootDataReader(object):
 
         # perform initialization
         self.init()
-        if self.verbose:
-            print("{} init is complete in {} sec".format(self, time.time()-time0))
+        #if self.verbose:
+            #print("{} init is complete in {} sec".format(self, time.time()-time0))
 
         # declare histograms for original and normilized values
         if hg and self.hists:
@@ -977,11 +977,13 @@ class RootDataReader(object):
             self.time_reading_and_specs.append(time.time()-time_beginning)
             if self.nevts > 0 and tot >= self.nevts:
                 if self.verbose:
-                    print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:])}; number of chunks {len(self.time_reading_and_specs)}")
-                    print(f"###total time elapsed for reading: {sum(self.time_reading[:])}; number of chunks {len(self.time_reading)}\n")
+                    print(f"Number of chunks {len(self.time_reading_and_specs)}")
+                    print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
+                    print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec\n")
                     if self.nevts == self.nrows:
-                        print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:-1])}; number of chunks {len(self.time_reading_and_specs)-1}")
-                        print(f"###total time elapsed for reading: {sum(self.time_reading[:-1])}; number of chunks {len(self.time_reading)-1}\n")
+                        print(f"Number of chunks {len(self.time_reading)-1}")
+                        print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:-1]), 3)} sec")
+                        print(f"###total time elapsed for reading: {round(sum(self.time_reading[:-1]), 3)} sec\n")
                 break
 
         # if we've been asked to read all or zero events we determine
@@ -1010,7 +1012,7 @@ class RootDataReader(object):
             for key, val in self.minv.items():
                 print(key, val, self.maxv[key])
         self.shape = len(self.flat_keys()) + sum(self.jdim.values())
-        msg = "--- first pass: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
+        msg = "--- reading completed: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
                 % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
         if self.verbose:
             print(msg)

@@ -16,7 +16,7 @@ import json
 import argparse
 
 # MLaaS4HEP modules
-from MLaaS4HEP.models import train_model
+from models import train_model
 
 class OptionParser(object):
     "OptionParser class for workflow arguments"
@@ -73,9 +73,6 @@ def main():
         labels = opts.labels.split(',')
     else:
         labels = opts.labels # label name to look-up in data
-
-    if opts.preproc and os.path.isfile(opts.preproc):
-        print('preproc.json provided')
 
     if opts.model:
         train_model(opts.model, files, labels, \

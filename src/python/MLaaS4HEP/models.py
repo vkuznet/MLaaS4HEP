@@ -33,8 +33,8 @@ except ImportError:
     torch = None
 
 # MLaaS4HEP modules
-from MLaaS4HEP.generator import RootDataGenerator, MetaDataGenerator, file_type
-from MLaaS4HEP.utils import load_code, print_cut
+from generator import RootDataGenerator, MetaDataGenerator, file_type
+from utils import load_code, print_cut
 
 class Trainer(object):
     """
@@ -133,7 +133,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         if not trainer:
             idim = np.shape(x_train)[-1] # read number of attributes we have
             model = model(idim)
-            print("model", model, "loss function", model.loss)
+            #print("model", model, "loss function", model.loss)
             trainer = Trainer(model, verbose=params.get('verbose', 0))
         # convert y_train to categorical array
         if model.loss == 'categorical_crossentropy':
@@ -155,10 +155,11 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         Y_val=val[:,-1:]
 
         #fit the model
-        print(f"\n####Time pre ml: {time.time()-time_ml}")
+        #print(f"\n####Time pre ml: {time.time()-time_ml}")
+        print('\n')
         time0 = time.time()
         trainer.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
-        print(f"\n####Time for training: {time.time()-time0}\n\n")
+        print(f"\n####Time for training: {time.time()-time0}\n")
     
     if fout and hasattr(trainer, 'save'):
         trainer.save(fout)
