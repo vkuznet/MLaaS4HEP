@@ -20,7 +20,7 @@ A simple example of a `preproc.json` file is the following:
       "cut_1": ["log_Energy<6.31", "any"],
       "cut_2": ["log_Energy>5.85", "all"],
       "remove": "False",
-      "keys_to_remove": ["partonE"]
+      "keys_to_remove": ["Energy"]
     },
 
     "nMuon_square": {

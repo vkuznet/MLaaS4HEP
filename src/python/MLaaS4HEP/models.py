@@ -34,7 +34,7 @@ except ImportError:
 
 # MLaaS4HEP modules
 from generator import RootDataGenerator, MetaDataGenerator, file_type
-from utils import load_code, print_cut
+from utils import load_code
 
 class Trainer(object):
     """
@@ -101,7 +101,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     model = load_code(model, 'model')
     if preproc:
         preproc = json.load(open(preproc))
-        print_cut(preproc)
+        #print_cut(preproc)
     if file_type(files) == 'root':
         gen = RootDataGenerator(files, labels, params, preproc, specs)
     else:
@@ -127,9 +127,11 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             x_mask = data[1]
             x_train[np.isnan(x_train)] = 0 # convert all nan's to zero
             y_train = data[2]
-            print("x_mask chunk of {} shape".format(np.shape(x_mask)))
+
         print("x_train chunk of {} shape".format(np.shape(x_train)))
         print("y_train chunk of {} shape".format(np.shape(y_train)))
+        if len(data) == 3:
+            print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         if not trainer:
             idim = np.shape(x_train)[-1] # read number of attributes we have
             model = model(idim)

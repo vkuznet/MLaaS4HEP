@@ -295,9 +295,9 @@ class HDFSJSONReader(HDFSReader):
             if self.preproc:
                 rec = self.preproc(rec)
             if not self.keys:
-                self.keys = [k for k in sorted(rec.keys())]
-            if self.keys != sorted(rec.keys()):
-                rkeys = sorted(rec.keys())
+                self.keys = [k for k in rec.keys()]
+            if self.keys != rec.keys():
+                rkeys = rec.keys()
                 msg = 'WARNING: record %s contains different set of keys from original ones\n' % idx
                 msg += 'original keys : %s\n' % json.dumps(self.keys)
                 msg += 'record   keys : %s\n' % json.dumps(rkeys)
@@ -354,10 +354,10 @@ class HDFSCSVReader(HDFSReader):
             if self.preproc:
                 row = self.preproc(row)
             if not self.keys:
-                self.keys = [k for k in sorted(row)]
+                self.keys = [k for k in row]
                 continue
             rec = dict(zip(self.keys, row))
-            if self.keys != sorted(rec.keys()):
+            if self.keys != rec.keys():
                 msg = 'WARNING: record %s contains different set of keys from original ones' % idx
                 if self.verbose:
                     print(msg)
@@ -431,9 +431,9 @@ class JSONReader(FileReader):
             if self.preproc:
                 rec = self.preproc(rec)
             if not self.keys:
-                self.keys = [k for k in sorted(rec.keys())]
-            if self.keys != sorted(rec.keys()):
-                rkeys = sorted(rec.keys())
+                self.keys = [k for k in rec.keys()]
+            if self.keys != rec.keys():
+                rkeys = rec.keys()
                 msg = 'WARNING: record %s contains different set of keys from original ones\n' % idx
                 msg += 'original keys : %s\n' % json.dumps(self.keys)
                 msg += 'record   keys : %s\n' % json.dumps(rkeys)
@@ -481,10 +481,10 @@ class CSVReader(FileReader):
             if self.preproc:
                 row = self.preproc(row)
             if not self.keys:
-                self.keys = [k for k in sorted(row)]
+                self.keys = [k for k in row]
                 continue
             rec = dict(zip(self.keys, row))
-            if self.keys != sorted(rec.keys()):
+            if self.keys != rec.keys():
                 msg = 'WARNING: record %s contains different set of keys from original ones' % idx
                 if self.verbose:
                     print(msg)
@@ -846,7 +846,7 @@ class RootDataReader(object):
         end_time = time.time()
 
         if self.verbose:
-            performance(nevts, self.tree, self.branches, start_time, end_time)
+            performance(nevts, self.tree, self.branches, start_time, end_time, self.cutted_events)
 
         if set_branches:
             if self.preproc:
@@ -911,7 +911,7 @@ class RootDataReader(object):
     def init(self):
         "Initialize class data members by scaning ROOT tree"
         if self.minv and self.maxv:
-            self.attrs = sorted(self.flat_keys()) + sorted(self.jagged_keys())
+            self.attrs = self.flat_keys() + self.jagged_keys()
             self.shape = len(self.flat_keys()) + sum(self.jdim.values())
             msg = "+++ first pass: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
                     % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
@@ -947,6 +947,7 @@ class RootDataReader(object):
         set_branches = True
         set_min_max = True
         for chunk in steps(tot_rows, self.chunk_size):
+            i = 0
             time_beginning = time.time()
             if tot + self.chunk_size > self.nevts:
                 if not self.preproc:
@@ -966,6 +967,7 @@ class RootDataReader(object):
 
                 if (tot + len(j_branch))>=self.nevts:
                     dim = dim_jarr(j_branch[:(self.nevts-tot)])
+                    erwin = (tot + len(j_branch[:(self.nevts - tot)]))
                 else:
                     dim = dim_jarr(j_branch)
 
@@ -979,11 +981,15 @@ class RootDataReader(object):
                 if self.verbose:
                     print(f"Number of chunks {len(self.time_reading_and_specs)}")
                     print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
-                    print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec\n")
+                    print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
+                    print("###events read for the specs file computation: %s events\n" \
+                          % (erwin))
                     if self.nevts == self.nrows:
                         print(f"Number of chunks {len(self.time_reading)-1}")
                         print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:-1]), 3)} sec")
-                        print(f"###total time elapsed for reading: {round(sum(self.time_reading[:-1]), 3)} sec\n")
+                        print(f"###total time elapsed for reading: {round(sum(self.time_reading[:-1]), 3)} sec")
+                        print("###events read for the specs file computation: %s events\n" \
+                              % (erwin))
                 break
 
         # if we've been asked to read all or zero events we determine
@@ -1002,7 +1008,7 @@ class RootDataReader(object):
         self.gen = None
 
         # define final list of attributes
-        self.attrs = sorted(self.flat_keys()) + sorted(self.jagged_keys())
+        self.attrs = self.flat_keys() + self.jagged_keys()
 
         if self.verbose > 1:
             print("\n### Dimensionality")
@@ -1012,8 +1018,9 @@ class RootDataReader(object):
             for key, val in self.minv.items():
                 print(key, val, self.maxv[key])
         self.shape = len(self.flat_keys()) + sum(self.jdim.values())
-        msg = "--- reading completed: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
-                % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
+        if not self.preproc:
+            msg = "--- total events on the whole file: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
+                    % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
         if self.verbose:
             print(msg)
             if self.verbose > 1:
@@ -1111,7 +1118,7 @@ class RootDataReader(object):
         # build output matrix
         time0 = time.time()
         shape = len(self.flat_keys())
-        for key in sorted(self.jagged_keys()):
+        for key in self.jagged_keys():
             shape += self.jdim[key]
         xdf = np.ndarray(shape=(shape,))
         mask = np.ndarray(shape=(shape,), dtype=np.int)
@@ -1157,7 +1164,7 @@ class RootDataReader(object):
         self.chunk_idx = self.chunk_idx + 1
 
         idx = 0
-        for idx, key in enumerate(sorted(self.flat_keys())):
+        for idx, key in enumerate(self.flat_keys()):
             if sys.version.startswith('3.') and isinstance(key, str):
                 key = key.encode('ascii') # convert string to binary
             if key.decode() != self.label:
@@ -1175,7 +1182,7 @@ class RootDataReader(object):
         else:
             pos = 0
 
-        for key in sorted(self.jagged_keys()):
+        for key in self.jagged_keys():
             # check if key in our record
             if key in rec.keys():
                 vals = rec.get(key, [])
@@ -1225,7 +1232,7 @@ class RootDataReader(object):
         if attr in self.flat_keys():
             return idx, idx+1
         start_idx = len(self.flat_keys())
-        for key in sorted(self.jagged_keys()):
+        for key in self.jagged_keys():
             if key == attr:
                 return start_idx, start_idx + self.jdim[key]
             start_idx += self.jdim[key]
@@ -1233,13 +1240,13 @@ class RootDataReader(object):
 
     def jagged_keys(self):
         "helper function to return list of jagged branches"
-        jkeys = sorted(list(self.jkeys))
+        jkeys = list(self.jkeys)
         return jkeys
 
     def flat_keys(self):
         "helper function to return list of normal branches"
         fkeys = [k for k in self.fkeys if k not in self.identifier]
-        return sorted(fkeys)
+        return fkeys
 
     def draw_value(self, key):
         "Draw a random value from underlying chunk for a given key"

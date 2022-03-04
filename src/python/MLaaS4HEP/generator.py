@@ -19,7 +19,7 @@ import numpy as np
 
 # MLaaS4HEP modules
 from reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
-from utils import file_type, timestamp, global_cut
+from utils import file_type, timestamp, global_cut, print_cut
 
 
 class MetaDataGenerator(object):
@@ -219,7 +219,9 @@ class RootDataGenerator(object):
 
         if verbose:
             #print(timestamp('DataGenerator: {}'.format(self)))
-            print("Parameters: {}".format(json.dumps(params)))
+            print("\nParameters: {}".format(json.dumps(params)))
+        if self.preproc:
+            print_cut(self.preproc)
 
         if exclude_branches and not isinstance(exclude_branches, list):
             if os.path.isfile(exclude_branches):
@@ -531,10 +533,13 @@ class RootDataGenerator(object):
     def global_specs (self, fname, reader):
         "Function to build specs for the whole set of root files"
         if reader.preproc:
+            print("--- Computing the number of events which satisfies the cuts on the whole file ---")
             self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
                                             reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
                                             reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
-            print('Events after cut: {}'.format(self.events[fname]))
+            print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs" \
+            % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
+            #print('Events after cut: {}'.format(self.events[fname]))
             self.events['total'] += self.events[fname]
         else:
             self.events[fname] = reader.nrows

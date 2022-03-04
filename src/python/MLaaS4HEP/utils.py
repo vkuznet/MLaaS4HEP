@@ -114,21 +114,36 @@ def mem_usage(vmem0, swap0, vmem1, swap1, msg=None):
     swap_used = (swap1.used-swap0.used)/mbyte
     print("VMEM used: %s (MB) SWAP used: %s (MB)" % (vmem_used, swap_used))
 
-def performance(nevts, tree, data, start_time, end_time, msg=""):
+def performance(nevts, tree, data, start_time, end_time, cutted_evts=None, msg=""):
     "helper function to show performance metrics of data read from a given tree"
     try:
-        nbytes = sum(x.content.nbytes + x.stops.nbytes \
-                         if isinstance(x, uproot.AsJagged) \
-                         else x.nbytes for x in data.values())
-        print("# %s entries, %s %sbranches, %s MB, %s sec, %s MB/sec, %s kHz" % \
-              ( \
-                  nevts, \
-                  len(data), \
-                  msg, \
-                  round(nbytes / 1024**2, 3), \
-                  round(end_time - start_time, 3), \
-                  round(nbytes / 1024**2 / (end_time - start_time), 3), \
-                  round(nevts / (end_time - start_time) / 1000, 3)))
+        if cutted_evts:
+            nbytes = sum(x.content.nbytes + x.stops.nbytes \
+                             if isinstance(x, uproot.AsJagged) \
+                             else x.nbytes for x in data.values())
+            print("# %s entries, %s events after cut, %s %sbranches, %s MB, %s sec, %s MB/sec, %s kHz" % \
+                  ( \
+                      nevts, \
+                      cutted_evts, \
+                      len(data), \
+                      msg, \
+                      round(nbytes / 1024**2, 3), \
+                      round(end_time - start_time, 3), \
+                      round(nbytes / 1024**2 / (end_time - start_time), 3), \
+                      round(nevts / (end_time - start_time) / 1000, 3)))
+        else:
+            nbytes = sum(x.content.nbytes + x.stops.nbytes \
+                             if isinstance(x, uproot.AsJagged) \
+                             else x.nbytes for x in data.values())
+            print("# %s entries, %s %sbranches, %s MB, %s sec, %s MB/sec, %s kHz" % \
+                  ( \
+                      nevts, \
+                      len(data), \
+                      msg, \
+                      round(nbytes / 1024**2, 3), \
+                      round(end_time - start_time, 3), \
+                      round(nbytes / 1024**2 / (end_time - start_time), 3), \
+                      round(nevts / (end_time - start_time) / 1000, 3)))
     except Exception as exc:
         print(str(exc))
 
@@ -561,8 +576,7 @@ def print_cut(preproc):
                     print(flat[key][elem])
                 else:
                     break
-    else:
-        print('# No cut on flat branches was provided')
+
 
     if jagged != {}:
         print("# Cut(s) provided on jagged branch(es):")
@@ -572,8 +586,7 @@ def print_cut(preproc):
                     print('{} using "{}"'.format(jagged[key][elem][0], jagged[key][elem][1]))
                 else:
                     break
-    else:
-        print('# No cut on jagged branches was provided')
+
 
     if new != {}:
         print("# Definition(s) of new branch(es): ")
@@ -593,8 +606,5 @@ def print_cut(preproc):
                     continue
             if gatsu == 0:
                 print("No cut(s) on {}".format(key))
-    else:
-        print('# No new branch was provided')
 
-    print('\n')
-    return "pippo"
+
