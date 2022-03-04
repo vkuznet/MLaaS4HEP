@@ -534,11 +534,13 @@ class RootDataGenerator(object):
         "Function to build specs for the whole set of root files"
         if reader.preproc:
             print("--- Computing the number of events which satisfies the cuts on the whole file ---")
+            global_timing = time.time()
             self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
                                             reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
                                             reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
             print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs" \
             % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
+            print("# total time elapsed: {}".format(time.time()-global_timing))
             #print('Events after cut: {}'.format(self.events[fname]))
             self.events['total'] += self.events[fname]
         else:
