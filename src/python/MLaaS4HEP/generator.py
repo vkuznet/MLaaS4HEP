@@ -540,7 +540,7 @@ class RootDataGenerator(object):
                                             reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
             print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs" \
             % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
-            print("# total time elapsed: {}".format(time.time()-global_timing))
+            print("# total time elapsed: {} sec".format(round(time.time()-global_timing, 3)))
             #print('Events after cut: {}'.format(self.events[fname]))
             self.events['total'] += self.events[fname]
         else:
