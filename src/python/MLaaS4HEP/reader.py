@@ -578,7 +578,7 @@ class RootDataReader(object):
             if specs:
                 print("{}".format(self.fin))
             else:
-                print("Reading {}".format(self.fin))
+                print("\nReading {}".format(self.fin))
         self.istream = uproot.open(self.fin)
         self.branches = {}
         self.gen = None
@@ -606,6 +606,7 @@ class RootDataReader(object):
         self.dimension_list = []
         self.time_reading = []
         self.time_reading_and_specs = []
+        self.cutted_events = None
         if specs:
             self.load_specs(specs)
         else:
@@ -968,21 +969,23 @@ class RootDataReader(object):
 
             self.read_chunk(nevts, set_branches=set_branches, set_min_max=set_min_max)
             set_branches = False # we do it once
-            for key in self.jkeys:
-                if key not in self.jdim:
-                    self.jdim[key] = 0
-                j_branch = self.fetch_data(key)
+            if self.jkeys:
+                for key in self.jkeys:
+                    if key not in self.jdim:
+                        self.jdim[key] = 0
 
-                if (tot + len(j_branch))>=self.nevts:
-                    dim = dim_jarr(j_branch[:(self.nevts-tot)])
-                    erwin = (tot + len(j_branch[:(self.nevts - tot)]))
-                else:
-                    dim = dim_jarr(j_branch)
+                    j_branch = self.fetch_data(key)
 
-                if dim > self.jdim.get(key, 0):
-                    self.jdim[key] = dim
+                    if (tot + len(j_branch))>=self.nevts:
+                        dim = dim_jarr(j_branch[:(self.nevts-tot)])
+                        erwin = (tot + len(j_branch[:(self.nevts - tot)]))
+                    else:
+                        dim = dim_jarr(j_branch)
 
-            tot += len(j_branch)
+                    if dim > self.jdim.get(key, 0):
+                        self.jdim[key] = dim
+
+                tot += len(j_branch)
 
             self.time_reading_and_specs.append(time.time()-time_beginning)
             if self.nevts > 0 and tot >= self.nevts:
@@ -1029,7 +1032,7 @@ class RootDataReader(object):
                 print(key, val, self.maxv[key])
         self.shape = len(self.flat_keys()) + sum(self.jdim.values())
         if not self.preproc:
-            msg = "--- total events on the whole file: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
+            msg = "--- first pass: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
                     % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
         if self.verbose:
             print(msg)
