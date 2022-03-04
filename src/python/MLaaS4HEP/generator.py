@@ -219,10 +219,9 @@ class RootDataGenerator(object):
 
         if verbose:
             #print(timestamp('DataGenerator: {}'.format(self)))
-            print("\nParameters: {}".format(json.dumps(params)))
+            print("\nParameters: {}\n".format(json.dumps(params)))
         if self.preproc:
             print_cut(self.preproc)
-
         if exclude_branches and not isinstance(exclude_branches, list):
             if os.path.isfile(exclude_branches):
                 exclude_branches = \
@@ -256,8 +255,8 @@ class RootDataGenerator(object):
             sname = 'specs-{}.json'.format(fbase)
             if not specs:
                 if os.path.isfile(self.gname):
-                    if verbose:
-                        print("loading specs {}".format(self.gname))
+                    #if verbose:
+                    #    print("\nloading specs {}\n".format(self.gname))
                     specs = json.load(open(self.gname))
 
             reader = RootDataReader(fname, branch=branch, identifier=identifier, label=self.labels,\
@@ -267,6 +266,7 @@ class RootDataGenerator(object):
 
             # build specs for the whole set of root files
             self.global_specs(fname, reader)
+
 
             if not os.path.isfile(sname):
                 #if verbose:
@@ -533,16 +533,21 @@ class RootDataGenerator(object):
     def global_specs (self, fname, reader):
         "Function to build specs for the whole set of root files"
         if reader.preproc:
-            print("--- Computing the number of events which satisfies the cuts on the whole file ---")
-            global_timing = time.time()
-            self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
-                                            reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
-                                            reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
-            print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs" \
-            % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
-            print("# total time elapsed: {} sec".format(round(time.time()-global_timing, 3)))
-            #print('Events after cut: {}'.format(self.events[fname]))
-            self.events['total'] += self.events[fname]
+            if reader.evts:
+                self.events[fname] = reader.evts[fname]
+                self.events['total'] += self.events[fname]
+                print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs\n" \
+                      % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
+            else:
+                print("--- Computing the number of events which satisfies the cuts on the whole file ---")
+                global_timing = time.time()
+                self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
+                                                reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
+                                                reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
+                print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs" \
+                % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
+                print("# total time elapsed: {} sec\n".format(round(time.time()-global_timing, 3)))
+                self.events['total'] += self.events[fname]
         else:
             self.events[fname] = reader.nrows
             self.events['total'] += reader.nrows

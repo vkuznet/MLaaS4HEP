@@ -575,7 +575,10 @@ class RootDataReader(object):
         self.jagged_bool = False
         self.verbose = verbose
         if self.verbose:
-            print("\n\nReading {}".format(self.fin))
+            if specs:
+                print("{}".format(self.fin))
+            else:
+                print("Reading {}".format(self.fin))
         self.istream = uproot.open(self.fin)
         self.branches = {}
         self.gen = None
@@ -612,6 +615,7 @@ class RootDataReader(object):
             self.jkeys = []
             self.fkeys = []
             self.nans = {}
+            self.evts = {}
 
         time0 = time.time()
         if exclude_branches:
@@ -749,7 +753,7 @@ class RootDataReader(object):
         "load given specs"
         if not isinstance(specs, dict):
             if self.verbose:
-                print(f"load specs from {specs} for {self.fin}")
+                print(f"loaded specs from {specs} for {self.fin}")
             specs = json.load(open(specs))
         if self.verbose > 1:
             print("ROOT specs: {}".format(json.dumps(specs)))
@@ -759,6 +763,7 @@ class RootDataReader(object):
         self.jkeys = specs['jkeys']
         self.fkeys = specs['fkeys']
         self.nans = specs['nans']
+        self.evts = specs['events']
 
         self.flat_keys_encoded = [key for key in self.flat_keys()]
         self.jagged_keys_encoded = [key for key in self.jagged_keys()]
@@ -768,6 +773,8 @@ class RootDataReader(object):
         self.jdimension = [self.jdim[key] for key in self.jagged_keys_encoded]
         self.dimension_list = [1] * len(self.flat_keys_encoded)
         self.dimension_list = self.dimension_list + self.jdimension
+
+
 
     def fetch_data(self, key):
         "fetch data for given key from underlying ROOT tree"
@@ -916,7 +923,8 @@ class RootDataReader(object):
             msg = "+++ first pass: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
                     % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
             if self.verbose:
-                print(msg)
+                if not self.preproc:
+                    print(msg)
             if self.verbose > 1:
                 print("\n### Flat attributes:")
                 for key in self.flat_keys():
@@ -979,17 +987,19 @@ class RootDataReader(object):
             self.time_reading_and_specs.append(time.time()-time_beginning)
             if self.nevts > 0 and tot >= self.nevts:
                 if self.verbose:
-                    print(f"Number of chunks {len(self.time_reading_and_specs)}")
+                    #print(f"Number of chunks {len(self.time_reading_and_specs)}")
+                    print("###events read for the specs file computation: %s events from %s chunks with size %s" \
+                          % (erwin, len(self.time_reading_and_specs), self.chunk_size))
                     print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
                     print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
-                    print("###events read for the specs file computation: %s events\n" \
-                          % (erwin))
+
                     if self.nevts == self.nrows:
-                        print(f"Number of chunks {len(self.time_reading)-1}")
+                        #print(f"Number of chunks {len(self.time_reading)-1}")
+                        print("###events read for the specs file computation: %s events from %s chunks with size %s" \
+                              % (erwin, len(self.time_reading_and_specs), self.chunk_size))
                         print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:-1]), 3)} sec")
                         print(f"###total time elapsed for reading: {round(sum(self.time_reading[:-1]), 3)} sec")
-                        print("###events read for the specs file computation: %s events\n" \
-                              % (erwin))
+
                 break
 
         # if we've been asked to read all or zero events we determine

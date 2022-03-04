@@ -566,7 +566,6 @@ def print_cut(preproc):
     if jagged_bool == False:
         jagged = {}
 
-    print('\n')
 
     if flat != {}:
         print("# Cut(s) provided on flat branch(es):")
@@ -606,5 +605,7 @@ def print_cut(preproc):
                     continue
             if gatsu == 0:
                 print("No cut(s) on {}".format(key))
+
+        print('\n')
 
 
