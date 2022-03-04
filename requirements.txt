@@ -2,3 +2,5 @@ numpy
 pandas
 pyarrow
 uproot
+tensorflow
+keras
