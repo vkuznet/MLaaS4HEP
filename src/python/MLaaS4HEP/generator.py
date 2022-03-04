@@ -275,7 +275,7 @@ class RootDataGenerator(object):
 
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
-
+        print('\n')
         for fname in self.files:
             self.reader[fname].load_specs(self.gname)
             if self.evts != -1:

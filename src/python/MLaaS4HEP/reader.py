@@ -576,9 +576,12 @@ class RootDataReader(object):
         self.verbose = verbose
         if self.verbose:
             if specs:
-                print("{}".format(self.fin))
+                print("\n{}".format(self.fin))
             else:
-                print("\nReading {}".format(self.fin))
+                if self.preproc:
+                    print("Reading {}".format(self.fin))
+                else:
+                    print("\nReading {}".format(self.fin))
         self.istream = uproot.open(self.fin)
         self.branches = {}
         self.gen = None
@@ -921,7 +924,7 @@ class RootDataReader(object):
         if self.minv and self.maxv:
             self.attrs = self.flat_keys() + self.jagged_keys()
             self.shape = len(self.flat_keys()) + sum(self.jdim.values())
-            msg = "+++ first pass: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
+            msg = "+++ reading completed: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
                     % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
             if self.verbose:
                 if not self.preproc:
@@ -999,26 +1002,15 @@ class RootDataReader(object):
             if self.nevts > 0 and tot >= self.nevts:
                 if self.verbose:
                     if self.preproc:
-                        #print(f"Number of chunks {len(self.time_reading_and_specs)}")
                         print("###events read for the specs file computation: %s events from %s chunks with size %s" \
                               % (erwin, len(self.time_reading_and_specs), self.chunk_size))
                         print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
                         print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
 
-                        if self.nevts == self.nrows:
-                            #print(f"Number of chunks {len(self.time_reading)-1}")
-                            print("###events read for the specs file computation: %s events from %s chunks with size %s" \
-                                  % (erwin, len(self.time_reading_and_specs), self.chunk_size))
-                            print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:-1]), 3)} sec")
-                            print(f"###total time elapsed for reading: {round(sum(self.time_reading[:-1]), 3)} sec")
                     else:
-                        print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:])}; number of chunks {len(self.time_reading_and_specs)}")
-                        print(f"###total time elapsed for reading: {sum(self.time_reading[:])}; number of chunks {len(self.time_reading)}\n")
-
-                        if self.nevts == self.nrows:
-                            print(f"###total time elapsed for reading + specs computing: {sum(self.time_reading_and_specs[:-1])}; number of chunks {len(self.time_reading_and_specs)-1}")
-                            print(f"###total time elapsed for reading: {sum(self.time_reading[:-1])}; number of chunks {len(self.time_reading)-1}\n")
-
+                        print(f"Number of chunks {len(self.time_reading_and_specs)}")
+                        print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
+                        print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
                 break
 
         # if we've been asked to read all or zero events we determine
@@ -1048,7 +1040,7 @@ class RootDataReader(object):
                 print(key, val, self.maxv[key])
         self.shape = len(self.flat_keys()) + sum(self.jdim.values())
         if not self.preproc:
-            msg = "--- first pass: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
+            msg = "--- reading completed: %s events, (%s-flat, %s-jagged) branches, %s attrs" \
                     % (self.nrows, len(self.flat_keys()), len(self.jagged_keys()), self.shape)
         if self.verbose:
             print(msg)
