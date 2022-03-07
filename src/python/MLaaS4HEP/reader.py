@@ -576,7 +576,7 @@ class RootDataReader(object):
         self.verbose = verbose
         if self.verbose:
             if specs:
-                print("\n{}".format(self.fin))
+                print("{}".format(self.fin))
             else:
                 if self.preproc:
                     print("Reading {}".format(self.fin))
