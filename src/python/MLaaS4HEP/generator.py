@@ -19,7 +19,7 @@ import numpy as np
 
 # MLaaS4HEP modules
 from MLaaS4HEP.reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
-from MLaaS4HEP.utils import file_type, timestamp, global_cut
+from MLaaS4HEP.utils import file_type, timestamp, global_cut, print_cut
 
 
 class MetaDataGenerator(object):
@@ -171,7 +171,7 @@ class MetaDataGenerator(object):
         if self.verbose:
             nevts = self.reader_counter[self.current_file]
             msg = "\ntotal read {} evts from {}".format(nevts, current_file)
-            print(msg)
+            #print(msg)
 
 class RootDataGenerator(object):
     """
@@ -218,9 +218,10 @@ class RootDataGenerator(object):
         self.reader_counter = {} # reader counter keeps track of nevts read by readers
 
         if verbose:
-            print(timestamp('DataGenerator: {}'.format(self)))
-            print("model parameters: {}".format(json.dumps(params)))
-
+            #print(timestamp('DataGenerator: {}'.format(self)))
+            print("\nParameters: {}\n".format(json.dumps(params)))
+        if self.preproc:
+            print_cut(self.preproc)
         if exclude_branches and not isinstance(exclude_branches, list):
             if os.path.isfile(exclude_branches):
                 exclude_branches = \
@@ -254,8 +255,8 @@ class RootDataGenerator(object):
             sname = 'specs-{}.json'.format(fbase)
             if not specs:
                 if os.path.isfile(self.gname):
-                    if verbose:
-                        print("loading specs {}".format(self.gname))
+                    #if verbose:
+                    #    print("\nloading specs {}\n".format(self.gname))
                     specs = json.load(open(self.gname))
 
             reader = RootDataReader(fname, branch=branch, identifier=identifier, label=self.labels,\
@@ -266,14 +267,15 @@ class RootDataGenerator(object):
             # build specs for the whole set of root files
             self.global_specs(fname, reader)
 
+
             if not os.path.isfile(sname):
-                if verbose:
-                    print("writing specs {}".format(sname))
+                #if verbose:
+                    #print("writing specs {}".format(sname))
                 reader.write_specs(sname)
 
             self.reader[fname] = reader
             self.reader_counter[fname] = 0
-
+        print('\n')
         for fname in self.files:
             self.reader[fname].load_specs(self.gname)
             if self.evts != -1:
@@ -284,7 +286,7 @@ class RootDataGenerator(object):
             else:
                 self.evts_toread[fname] = round((float(self.events[fname])/self.events['total']) * self.chunk_size)
         self.current_file = self.files[0]
-        print("init RootDataGenerator in {} sec\n\n".format(time.time()-time0))
+        print("init RootDataGenerator in {} sec\n".format(time.time()-time0))
 
 
     @property
@@ -353,7 +355,7 @@ class RootDataGenerator(object):
             else:
                 evts = self.events[fname] - self.reader_counter[fname]
                 self.stop_idx = self.start_idx + evts
-            print(f"label {self.file_label_dict[self.current_file]}, "
+            print(f"\nlabel {self.file_label_dict[self.current_file]}, "
             f"file <{self.current_file.split('/')[-1]}>, going to read {evts} events")
             gen = self.read_data_mix_files(self.start_idx, self.stop_idx)
             for (xdf, mdf, idx_label) in gen:
@@ -389,7 +391,7 @@ class RootDataGenerator(object):
         if self.verbose:
             nevts = self.reader_counter[self.current_file]
             msg = "total read {} evts from {}\n".format(nevts, current_file)
-            print(msg)
+            #print(msg)
 
 
     def choose_file(self):
@@ -516,7 +518,7 @@ class RootDataGenerator(object):
         if self.verbose:
             nevts = self.reader_counter[self.current_file]
             msg = "\ntotal read {} evts from {}".format(nevts, current_file)
-            print(msg)
+            #print(msg)
     
     def write_global_specs(self):
         if not os.path.isfile(self.gname):
@@ -531,11 +533,21 @@ class RootDataGenerator(object):
     def global_specs (self, fname, reader):
         "Function to build specs for the whole set of root files"
         if reader.preproc:
-            self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
-                                        reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
-                                        reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
-            print('Cutted events: {}'.format(self.events[fname]))
-            self.events['total'] += self.events[fname]
+            if reader.evts:
+                self.events[fname] = reader.evts[fname]
+                self.events['total'] += self.events[fname]
+                print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs\n" \
+                      % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
+            else:
+                print("--- Computing the number of events which satisfies the cuts on the whole file ---")
+                global_timing = time.time()
+                self.events[fname] = global_cut(reader.tree, reader.flat, reader.flat_preproc, reader.jagged, \
+                                                reader.jagged_all, reader.jagged_any, reader.new_branch, reader.new_flat_cut, \
+                                                reader.new_jagged_cut, reader.aliases_string, reader.total_key, reader)
+                print("# %s total entries, %s total events after cut, (%s-flat, %s-jagged) branches, %s attrs" \
+                % (reader.nrows, self.events[fname], len(reader.flat_keys()), len(reader.jagged_keys()), reader.shape))
+                print("# total time elapsed: {} sec\n".format(round(time.time()-global_timing, 3)))
+                self.events['total'] += self.events[fname]
         else:
             self.events[fname] = reader.nrows
             self.events['total'] += reader.nrows
