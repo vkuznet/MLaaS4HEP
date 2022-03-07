@@ -1,4 +1,4 @@
-### Performing preprocessing operations using a preproc.json file
+## Performing preprocessing operations using a preproc.json file
 
 The MLaaS4HEP code has been updated to support [uproot4](https://uproot.readthedocs.io/en/latest/basic.html) and to allow users to perform pre-processing operations on the input ROOT data.
 The migration to the updated version of uproot allowed to create new branches and to apply cuts, both on new and on existing branches. In MLaaS4HEP now this is possible providing a `preproc.json` file as argument while running the `workflow.py` script:
