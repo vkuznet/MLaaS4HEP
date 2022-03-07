@@ -545,6 +545,10 @@ def print_cut(preproc):
     new_bool = False
     flat_bool = False
     jagged_bool = False
+    jagged_remove = []
+    flat_remove = []
+    new_remove = []
+    to_remove = []
 
     for elem in preproc.keys():
         if elem.startswith("new_"):
@@ -568,33 +572,54 @@ def print_cut(preproc):
 
 
     if flat != {}:
-        print("# Cut(s) provided on flat branch(es):")
+        print("### Cut(s) provided on flat branch(es):")
         for key in flat.keys():
+            if flat[key]["remove"] == 'True':
+                flat_remove.append(key)
             for elem in flat[key]:
                 if elem.startswith("cut"):
                     print(flat[key][elem])
                 else:
                     break
 
+    to_remove += flat_remove
 
     if jagged != {}:
-        print("# Cut(s) provided on jagged branch(es):")
+        print("### Cut(s) provided on jagged branch(es):")
         for key in jagged.keys():
+            if jagged[key]["remove"] == 'True':
+                jagged_remove.append(key)
             for elem in jagged[key]:
                 if elem.startswith("cut"):
                     print('{} using "{}"'.format(jagged[key][elem][0], jagged[key][elem][1]))
                 else:
                     break
 
+    to_remove += jagged_remove
 
     if new != {}:
-        print("# Definition(s) of new branch(es): ")
+        print("### Definition(s) of new branch(es): ")
         for key in new.keys():
             print('{}: {}'.format(key, new[key]['def']))
-        print("# Cut(s) on new branch(es):")
+            if new[key]['remove'] == 'True':
+                new_remove.append(key)
+            for elem in new[key]:
+                if elem.startswith("keys_to_"):
+                    for elem in new[key]['keys_to_remove']:
+                        new_remove.append(elem)
+
+                    for elem in new_remove:
+                        if elem not in to_remove:
+                            to_remove.append(elem)
+                        else:
+                            continue
+
+
+        print("### Cut(s) on new branch(es):")
         for key in new.keys():
             gatsu = 0
             for elem in new[key]:
+
                 if elem.startswith("cut"):
                     if new[key]['type'] == "jagged":
                         print('{} using "{}"'.format(new[key][elem][0], new[key][elem][1]))
@@ -606,6 +631,9 @@ def print_cut(preproc):
             if gatsu == 0:
                 print("No cut(s) on {}".format(key))
 
-        print('\n')
+        if to_remove != []:
+            print("### Branches to remove after preprocessing:\n{}\n\n".format(to_remove))
+
+        #print('\n')
 
 
