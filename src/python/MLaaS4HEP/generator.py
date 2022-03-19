@@ -18,8 +18,8 @@ import random
 import numpy as np
 
 # MLaaS4HEP modules
-from MLaaS4HEP.reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
-from MLaaS4HEP.utils import file_type, timestamp, global_cut, print_cut
+from reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
+from utils import file_type, timestamp, global_cut, print_cut
 
 
 class MetaDataGenerator(object):
@@ -333,7 +333,9 @@ class RootDataGenerator(object):
     def next_mix_files(self):
         '''Return next batch of events in form of data and mask vectors.
            Use it to equally mix events from different files'''
+        ########
         if self.finish_file == True:
+            self.finish_file = False
             raise StopIteration
         time_start = time.time()
         data = []
