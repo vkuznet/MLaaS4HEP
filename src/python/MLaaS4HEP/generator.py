@@ -333,9 +333,8 @@ class RootDataGenerator(object):
     def next_mix_files(self):
         '''Return next batch of events in form of data and mask vectors.
            Use it to equally mix events from different files'''
-        ########
+
         if self.finish_file == True:
-            self.finish_file = False
             raise StopIteration
         time_start = time.time()
         data = []
