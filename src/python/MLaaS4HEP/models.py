@@ -111,7 +111,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     shuffle = params.get('shuffle', True)
     split = params.get('split', 0.3)
     trainer = False
-    kwds = {'batch_size': batch_size,
+    kwds = {'epochs': epochs, 'batch_size': batch_size,
             'shuffle': shuffle}
 
     for data in gen:
