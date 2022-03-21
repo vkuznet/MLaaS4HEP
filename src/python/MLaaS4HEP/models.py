@@ -113,7 +113,15 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     trainer = False
     kwds = {'epochs': epochs, 'batch_size': batch_size,
             'shuffle': shuffle}
-
+    accuracy_train=[]
+    accuracy_test=[]
+    accuracy_val=[]
+    log_loss_train=[]
+    log_loss_test=[]
+    log_loss_val=[]
+    auc_train=[]
+    auc_test=[]
+    auc_val=[]
     for data in gen:
         time_ml = time.time()
         if np.shape(data[0])[0] == 0:
@@ -162,6 +170,44 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         time0 = time.time()
         trainer.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
         print(f"\n####Time for training: {time.time()-time0}\n")
+
+        baseline_results = model.evaluate(X_train, Y_train, verbose=0)
+        for name, value in zip(model.metrics_names, baseline_results):
+            if name == 'loss':
+                log_loss_train.append(value)
+            if name == 'auc':
+                auc_train.append(value)
+            if name == 'accuracy':
+                accuracy_train.append(value)
+            #print(name, ': ', value)
+        baseline_results = model.evaluate(X_val, Y_val, verbose=0)
+        for name, value in zip(model.metrics_names, baseline_results):
+            if name == 'loss':
+                log_loss_val.append(value)
+            if name == 'auc':
+                auc_val.append(value)
+            if name == 'accuracy':
+                accuracy_val.append(value)
+
+        baseline_results = model.evaluate(X_test, Y_test, verbose=0)
+        for name, value in zip(model.metrics_names, baseline_results):
+            if name == 'loss':
+                log_loss_test.append(value)
+            if name == 'auc':
+                auc_test.append(value)
+            if name == 'accuracy':
+                accuracy_test.append(value)
+
+
+    print("log_loss_train: {}".format(log_loss_train))
+    print("log_loss_val: {}".format(log_loss_val))
+    print("log_loss_test: {}".format(log_loss_test))
+    print("auc_train: {}".format(auc_train))
+    print("auc_val: {}".format(auc_val))
+    print("auc_test: {}".format(auc_test))
+    print("accuracy_train: {}".format(accuracy_train))
+    print("accuracy_val: {}".format(accuracy_val))
+    print("accuracy_test: {}".format(accuracy_test))
 
     if fout and hasattr(trainer, 'save'):
         trainer.save(fout)
