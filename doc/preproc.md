@@ -4,7 +4,7 @@ The MLaaS4HEP code has been updated to support [uproot4](https://uproot.readthed
 The migration to the updated version of uproot allowed to create new branches and to apply cuts, both on new and on existing branches. In MLaaS4HEP now this is possible providing a `preproc.json` file as argument while running the `workflow.py` script:
 
 ```
-workflow --files=files.txt --labels=labels.txt --model=ex_keras.py --preproc=preproc.json
+workflow --files=files.txt --labels=labels.txt --model=ex_keras.py --params=params.json --preproc=preproc.json
 ```
 
 ### Structure of preproc.json
