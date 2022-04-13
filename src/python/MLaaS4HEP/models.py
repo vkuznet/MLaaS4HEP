@@ -33,8 +33,8 @@ except ImportError:
     torch = None
 
 # MLaaS4HEP modules
-from generator import RootDataGenerator, MetaDataGenerator, file_type
-from utils import load_code
+from MLaaS4HEP.generator import RootDataGenerator, MetaDataGenerator, file_type
+from MLaaS4HEP.utils import load_code
 
 class Trainer(object):
     """
@@ -111,7 +111,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     shuffle = params.get('shuffle', True)
     split = params.get('split', 0.3)
     trainer = False
-    kwds = {'epochs': epochs, 'batch_size': batch_size,
+    kwds = {'epochs':epochs, 'batch_size': batch_size,
             'shuffle': shuffle}
 
     for data in gen:
