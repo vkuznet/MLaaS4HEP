@@ -996,16 +996,24 @@ class RootDataReader(object):
                     self.jdim[key] = dim
 
             if self.preproc:
-                tot += len(j_branch)
+                if self.jkeys:
+                    tot += len(j_branch)
+                else:
+                    tot += nevts
 
             self.time_reading_and_specs.append(time.time()-time_beginning)
             if self.nevts > 0 and tot >= self.nevts:
                 if self.verbose:
                     if self.preproc:
-                        print("###events read for the specs file computation: %s events from %s chunks with size %s" \
-                              % (erwin, len(self.time_reading_and_specs), self.chunk_size))
-                        print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
-                        print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
+                        if self.jkeys:
+                            print("###events read for the specs file computation: %s events from %s chunks with size %s" \
+                                  % (erwin, len(self.time_reading_and_specs), self.chunk_size))
+                            print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
+                            print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
+                        else:
+                            print(f"Number of chunks {len(self.time_reading_and_specs)}")
+                            print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
+                            print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
 
                     else:
                         print(f"Number of chunks {len(self.time_reading_and_specs)}")
