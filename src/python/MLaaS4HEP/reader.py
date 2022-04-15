@@ -1082,7 +1082,6 @@ class RootDataReader(object):
                     nevts = self.nrows - self.counter_idx
                 else:
                     nevts = self.chunk_size
-                    print(nevts)
                 self.read_chunk(nevts)
                 self.chunk_idx = 0 # reset chunk index after we read the chunk of data
                 if self.verbose > 1:
