@@ -373,19 +373,19 @@ def aliases_func(nbranch, opbranch):
 
 def gen_preproc(tree, nevts, flat, jagged, flat_preproc, aliases_string, new_branch, new_flat_cut, total_key):
 
-    """A seconda del taglio selezionato, returno il giusto generatore gen"""
+    """Depending on the selected cuts, gen_preproc returns the right generator"""
 
     if (flat != {}) & (jagged == {}):
         if new_branch != {}:
             gen = tree.iterate(total_key, cut=flat_preproc[0], step_size=nevts, aliases=eval(aliases_string), library='ak')
         else:
-            gen = tree.iterate(cut=flat_preproc[0], step_size=nevts, library='np')
+            gen = tree.iterate(total_key, cut=flat_preproc[0], step_size=nevts, library='np')
 
     elif (flat != {}) & (jagged != {}):
         if new_branch != {}:
             gen = tree.iterate(total_key, cut=flat_preproc[0], step_size=nevts, aliases=eval(aliases_string), library='ak')
         else:
-            gen = tree.iterate(cut=flat_preproc[0], step_size=nevts, library='ak')
+            gen = tree.iterate(total_key, cut=flat_preproc[0], step_size=nevts, library='ak')
     else:
         if new_branch != {}:
             if new_flat_cut:
@@ -393,7 +393,7 @@ def gen_preproc(tree, nevts, flat, jagged, flat_preproc, aliases_string, new_bra
             else:
                 gen = tree.iterate(total_key, step_size= nevts, aliases=eval(aliases_string), library='ak')
         else:
-            gen = tree.iterate(step_size= nevts, library='ak')
+            gen = tree.iterate(total_key, step_size= nevts, library='ak')
 
     return gen
 
@@ -634,6 +634,5 @@ def print_cut(preproc):
         if to_remove != []:
             print("### Branches to remove after preprocessing:\n{}\n\n".format(to_remove))
 
-        #print('\n')
-
+    print('\n')
 

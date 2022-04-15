@@ -101,7 +101,6 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     model = load_code(model, 'model')
     if preproc:
         preproc = json.load(open(preproc))
-        #print_cut(preproc)
     if file_type(files) == 'root':
         gen = RootDataGenerator(files, labels, params, preproc, specs)
     else:
@@ -148,7 +147,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         Y_train_val = train_val[:,-1:]
         X_test = test[:,:-1]
         Y_test = test[:,-1:]
-        
+
         #create the validation set
         train, val = train_test_split(train_val, stratify=Y_train_val, test_size=0.2, random_state=21, shuffle=True)
         X_train=train[:,:-1]
@@ -162,6 +161,6 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         time0 = time.time()
         trainer.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
         print(f"\n####Time for training: {time.time()-time0}\n")
-    
+
     if fout and hasattr(trainer, 'save'):
         trainer.save(fout)

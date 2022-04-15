@@ -592,7 +592,7 @@ class RootDataReader(object):
         self.nevts = nevts if nevts != -1 else self.nrows
         self.label = label
         self.chunk_idx = 0
-        self.chunk_size = chunk_size if chunk_size < self.nrows else self.nrows
+        self.chunk_size = chunk_size if (chunk_size < self.nrows and chunk_size != -1) else self.nrows
         self.nan = float(nan)
         self.attrs = []
         self.shape = None
@@ -717,8 +717,6 @@ class RootDataReader(object):
             else:
                 if self.flat_cut:
                     self.flat_preproc = flat_handling(self.flat_cut)
-                else:
-                    print('No flat cut')
 
             if self.new_jagged_cut:
                 if self.jagged_cut:
@@ -729,8 +727,6 @@ class RootDataReader(object):
             else:
                 if self.jagged_cut:
                     self.jagged_all, self.jagged_any = jagged_handling(self.jagged_cut)
-                else:
-                    print('No jagged cut')
 
             self.to_remove = [self.to_remove[i][0] for i in range(len(self.to_remove)) if self.to_remove[i][1] == 'True']
 
@@ -996,16 +992,24 @@ class RootDataReader(object):
                     self.jdim[key] = dim
 
             if self.preproc:
-                tot += len(j_branch)
+                if self.jkeys:
+                    tot += len(j_branch)
+                else:
+                    tot += nevts
 
             self.time_reading_and_specs.append(time.time()-time_beginning)
             if self.nevts > 0 and tot >= self.nevts:
                 if self.verbose:
                     if self.preproc:
-                        print("###events read for the specs file computation: %s events from %s chunks with size %s" \
-                              % (erwin, len(self.time_reading_and_specs), self.chunk_size))
-                        print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
-                        print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
+                        if self.jkeys:
+                            print("###events read for the specs file computation: %s events from %s chunks with size %s" \
+                                  % (erwin, len(self.time_reading_and_specs), self.chunk_size))
+                            print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
+                            print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
+                        else:
+                            print(f"Number of chunks {len(self.time_reading_and_specs)}")
+                            print(f"###total time elapsed for reading + specs computing: {round(sum(self.time_reading_and_specs[:]), 3)} sec")
+                            print(f"###total time elapsed for reading: {round(sum(self.time_reading[:]), 3)} sec")
 
                     else:
                         print(f"Number of chunks {len(self.time_reading_and_specs)}")
@@ -1078,6 +1082,7 @@ class RootDataReader(object):
                     nevts = self.nrows - self.counter_idx
                 else:
                     nevts = self.chunk_size
+                    print(nevts)
                 self.read_chunk(nevts)
                 self.chunk_idx = 0 # reset chunk index after we read the chunk of data
                 if self.verbose > 1:
