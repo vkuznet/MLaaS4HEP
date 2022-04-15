@@ -86,9 +86,9 @@ except ImportError:
     pyarrow = None
 
 # MLaaS4HEP modules
-from MLaaS4HEP.utils import nrows, dump_histograms, mem_usage, performance
-from MLaaS4HEP.utils import steps, fopen, file_type, load_code
-from MLaaS4HEP.utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
+from utils import nrows, dump_histograms, mem_usage, performance
+from utils import steps, fopen, file_type, load_code
+from utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
 
 class OptionParser(object):
     "Option parser class for reader arguments"
@@ -717,8 +717,6 @@ class RootDataReader(object):
             else:
                 if self.flat_cut:
                     self.flat_preproc = flat_handling(self.flat_cut)
-                else:
-                    print('No flat cut')
 
             if self.new_jagged_cut:
                 if self.jagged_cut:
@@ -729,8 +727,6 @@ class RootDataReader(object):
             else:
                 if self.jagged_cut:
                     self.jagged_all, self.jagged_any = jagged_handling(self.jagged_cut)
-                else:
-                    print('No jagged cut')
 
             self.to_remove = [self.to_remove[i][0] for i in range(len(self.to_remove)) if self.to_remove[i][1] == 'True']
 
@@ -1086,6 +1082,7 @@ class RootDataReader(object):
                     nevts = self.nrows - self.counter_idx
                 else:
                     nevts = self.chunk_size
+                    print(nevts)
                 self.read_chunk(nevts)
                 self.chunk_idx = 0 # reset chunk index after we read the chunk of data
                 if self.verbose > 1:

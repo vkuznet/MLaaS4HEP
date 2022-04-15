@@ -33,8 +33,8 @@ except ImportError:
     torch = None
 
 # MLaaS4HEP modules
-from MLaaS4HEP.generator import RootDataGenerator, MetaDataGenerator, file_type
-from MLaaS4HEP.utils import load_code
+from generator import RootDataGenerator, MetaDataGenerator, file_type
+from utils import load_code
 
 class Trainer(object):
     """
@@ -101,7 +101,6 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
     model = load_code(model, 'model')
     if preproc:
         preproc = json.load(open(preproc))
-        #print_cut(preproc)
     if file_type(files) == 'root':
         gen = RootDataGenerator(files, labels, params, preproc, specs)
     else:

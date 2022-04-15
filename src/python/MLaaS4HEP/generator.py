@@ -16,10 +16,14 @@ import random
 
 # numpy modules
 import numpy as np
+try:
+    import uproot
+except ImportError:
+    pass
 
 # MLaaS4HEP modules
-from MLaaS4HEP.reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
-from MLaaS4HEP.utils import file_type, timestamp, global_cut, print_cut
+from reader import RootDataReader, JsonReader, CsvReader, AvroReader, ParquetReader
+from utils import file_type, timestamp, global_cut, print_cut
 
 
 class MetaDataGenerator(object):
@@ -234,6 +238,16 @@ class RootDataGenerator(object):
         self.start_idx = 0
         self.chunk_size = chunk_size
         self.stop_idx = chunk_size
+        if chunk_size == -1:
+            _ = 0
+            for fname in self.files:
+                istream_ = uproot.open(fname)
+                tree_ = istream_[branch]
+                nrows_ = tree_.num_entries
+                _ += nrows_
+            self.chunk_size = _
+            self.stop_idx = self.chunk_size
+            print(self.chunk_size)
         self.batch_size = batch_size
         self.verbose = verbose
         self.jdim = {}

@@ -16,7 +16,7 @@ import json
 import argparse
 
 # MLaaS4HEP modules
-from MLaaS4HEP.models import train_model
+from models import train_model
 
 class OptionParser(object):
     "OptionParser class for workflow arguments"
