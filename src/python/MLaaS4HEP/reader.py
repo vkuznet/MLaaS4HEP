@@ -86,9 +86,9 @@ except ImportError:
     pyarrow = None
 
 # MLaaS4HEP modules
-from utils import nrows, dump_histograms, mem_usage, performance
-from utils import steps, fopen, file_type, load_code
-from utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
+from MLaaS4HEP.utils import nrows, dump_histograms, mem_usage, performance
+from MLaaS4HEP.utils import steps, fopen, file_type, load_code
+from MLaaS4HEP.utils import flat_handling, jagged_handling, new_branch_handling, gen_preproc, cutted_next
 
 class OptionParser(object):
     "Option parser class for reader arguments"
@@ -592,7 +592,7 @@ class RootDataReader(object):
         self.nevts = nevts if nevts != -1 else self.nrows
         self.label = label
         self.chunk_idx = 0
-        self.chunk_size = chunk_size if chunk_size < self.nrows else self.nrows
+        self.chunk_size = chunk_size if (chunk_size < self.nrows and chunk_size != -1) else self.nrows
         self.nan = float(nan)
         self.attrs = []
         self.shape = None

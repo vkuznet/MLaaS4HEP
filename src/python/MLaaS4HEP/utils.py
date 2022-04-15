@@ -633,7 +633,6 @@ def print_cut(preproc):
 
         if to_remove != []:
             print("### Branches to remove after preprocessing:\n{}\n\n".format(to_remove))
-        print('\n')
 
     print('\n')
 
