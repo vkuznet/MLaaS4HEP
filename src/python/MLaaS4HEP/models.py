@@ -16,7 +16,7 @@ from __future__ import print_function, division, absolute_import
 
 # system modules
 import time
-
+import json
 # numpy modules
 import numpy as np
 
@@ -100,9 +100,9 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         specs = {}
     model = load_code(model, 'model')
     if preproc:
-        preproc = load_code(preproc, 'preprocessing')
+        preproc = json.load(open(preproc))
     if file_type(files) == 'root':
-        gen = RootDataGenerator(files, labels, params, specs)
+        gen = RootDataGenerator(files, labels, params, preproc, specs)
     else:
         gen = MetaDataGenerator(files, labels, params, preproc, dtype)
     epochs = params.get('epochs', 10)
@@ -126,13 +126,15 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
             x_mask = data[1]
             x_train[np.isnan(x_train)] = 0 # convert all nan's to zero
             y_train = data[2]
-            print("x_mask chunk of {} shape".format(np.shape(x_mask)))
+
         print("x_train chunk of {} shape".format(np.shape(x_train)))
         print("y_train chunk of {} shape".format(np.shape(y_train)))
+        if len(data) == 3:
+            print("x_mask chunk of {} shape".format(np.shape(x_mask)))
         if not trainer:
             idim = np.shape(x_train)[-1] # read number of attributes we have
             model = model(idim)
-            print("model", model, "loss function", model.loss)
+            #print("model", model, "loss function", model.loss)
             trainer = Trainer(model, verbose=params.get('verbose', 0))
         # convert y_train to categorical array
         if model.loss == 'categorical_crossentropy':
@@ -145,7 +147,7 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         Y_train_val = train_val[:,-1:]
         X_test = test[:,:-1]
         Y_test = test[:,-1:]
-        
+
         #create the validation set
         train, val = train_test_split(train_val, stratify=Y_train_val, test_size=0.2, random_state=21, shuffle=True)
         X_train=train[:,:-1]
@@ -154,10 +156,11 @@ def train_model(model, files, labels, preproc=None, params=None, specs=None, fou
         Y_val=val[:,-1:]
 
         #fit the model
-        print(f"\n####Time pre ml: {time.time()-time_ml}")
+        #print(f"\n####Time pre ml: {time.time()-time_ml}")
+        print('\n')
         time0 = time.time()
         trainer.fit(X_train, Y_train, **kwds, validation_data=(X_val,Y_val))
-        print(f"\n####Time for training: {time.time()-time0}\n\n")
-    
+        print(f"\n####Time for training: {time.time()-time0}\n")
+
     if fout and hasattr(trainer, 'save'):
         trainer.save(fout)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 #pylint: disable=R0903
+
 """
 File       : workflow.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
